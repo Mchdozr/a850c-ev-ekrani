@@ -1,0 +1,1 @@
+Arçelik A 850 C için ev ekranı. Kaynak bu depoda.
