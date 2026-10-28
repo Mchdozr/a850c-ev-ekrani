@@ -2,11 +2,11 @@
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 
-import { AppGlyphMark, AppMark } from "@/components/app-marks";
+import { AppGlyphMark } from "@/components/app-marks";
 import { PosterStill } from "@/components/poster-still";
 import { APP_COLORS, wallpaperCss, type HomeDesign } from "@/lib/design";
 import { appKey, cardKey, heroKey } from "@/lib/focus";
-import { appMarkKind, type AppMarkKind } from "@/lib/marks";
+import { appMarkKind } from "@/lib/marks";
 import { glyphFill, mosaicSlots, tileFill, tileInk } from "@/lib/mosaic";
 import { formatIstanbulDate, formatIstanbulTime } from "@/lib/time";
 
@@ -78,6 +78,7 @@ function TvButton({
   onActivate,
   className,
   mark,
+  label,
   style,
   children,
 }: {
@@ -86,6 +87,7 @@ function TvButton({
   onActivate: (key: string) => void;
   className: string;
   mark?: string;
+  label?: string;
   style?: CSSProperties;
   children: ReactNode;
 }) {
@@ -96,60 +98,13 @@ function TvButton({
       data-focus-key={itemKey}
       data-focused={focused ? "true" : "false"}
       data-app-mark={mark}
+      aria-label={label}
       className={className}
       style={style}
       onClick={() => onActivate(itemKey)}
     >
       {children}
     </button>
-  );
-}
-
-function AppGlyph({
-  id,
-  name,
-  colorId,
-  lead,
-  thin,
-}: {
-  id: string;
-  name: string;
-  colorId: HomeDesign["apps"][number]["colorId"];
-  lead: boolean;
-  thin?: boolean;
-}) {
-  const color = APP_COLORS[colorId];
-  const label = name.trim() || "Adsız";
-  const kind = appMarkKind(id, label);
-  const iconClass = thin
-    ? lead
-      ? "size-[4.7cqw] text-[1.7cqw]"
-      : "size-[3.15cqw] text-[1.15cqw]"
-    : lead
-      ? "size-[6.7cqw] text-[2.35cqw]"
-      : "size-[4.15cqw] text-[1.45cqw]";
-  return (
-    <span className="flex flex-col items-center gap-[0.42cqw]">
-      <span
-        className={`tv-glow block overflow-hidden rounded-[30%] font-sans font-medium ${iconClass}`}
-      >
-        <AppMark
-          kind={kind}
-          letter={label.slice(0, 1).toLocaleUpperCase("tr-TR")}
-          swatch={color.swatch}
-          ink={color.ink}
-        />
-      </span>
-      <span
-        className={
-          lead
-            ? "max-w-[8.4cqw] truncate text-[1.18cqw] font-medium text-foreground/90"
-            : "max-w-[6.4cqw] truncate text-[1cqw] font-light text-foreground/50"
-        }
-      >
-        {label}
-      </span>
-    </span>
   );
 }
 
@@ -181,33 +136,18 @@ function AppDock({
           : "flex items-end gap-[1.35cqw] overflow-x-auto px-[0.35cqw] py-[0.45cqw]"
       }
     >
-      {design.apps.map((app, index) => {
-        const key = appKey(app.id);
-        const separate =
-          index === 1 && design.apps.length > 2
-            ? vertical
-              ? "mb-[1.1cqw]"
-              : "mr-[1.8cqw]"
-            : "";
-        return (
-          <TvButton
-            key={app.id}
-            itemKey={key}
-            focused={focusKey === key}
-            onActivate={onActivate}
-            mark={appMarkKind(app.id, app.name)}
-            className={`shrink-0 rounded-[1.2cqw] text-left ${separate}`}
-          >
-            <AppGlyph
-              id={app.id}
-              name={app.name}
-              colorId={app.colorId}
-              lead={index < 2}
-              thin={thin}
-            />
-          </TvButton>
-        );
-      })}
+      {design.apps.map((app) => (
+        <BrandTile
+          key={app.id}
+          design={design}
+          app={app}
+          featured={false}
+          compact={thin}
+          focusKey={focusKey}
+          onActivate={onActivate}
+          className={vertical ? "h-[12.8cqh] w-[7.8cqw] shrink-0" : "h-[12.8cqh] w-[10cqw] shrink-0"}
+        />
+      ))}
     </div>
   );
 }
@@ -382,16 +322,21 @@ function SaatLayout({
 }: TvScreenProps & { now: Date | null }) {
   const [shown, setShown] = useState(false);
   useEffect(() => {
+    const reveal = () => setShown(true);
     const onKey = (event: KeyboardEvent) => {
       if (event.key.startsWith("Arrow")) {
-        setShown(true);
+        reveal();
       }
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("tv-reveal-apps", reveal);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("tv-reveal-apps", reveal);
+    };
   }, []);
   return (
-    <div className="relative h-full">
+    <div className="relative h-full" data-clock-apps={shown ? "shown" : "hidden"}>
       <div className="absolute inset-0 flex items-center justify-center">
         {design.showClock ? (
           <p className="font-sans text-[8.33cqw] leading-none font-light tracking-tight text-white tabular-nums">
@@ -421,15 +366,6 @@ function SaatLayout({
   );
 }
 
-const BRAND_LOGOS: Partial<
-  Record<AppMarkKind, { src: string; fit: "cover" | "contain"; plate: string }>
-> = {
-  youtube: { src: "/logos/youtube.png", fit: "contain", plate: "#000000" },
-  netflix: { src: "/logos/netflix.png", fit: "contain", plate: "#000000" },
-  disney: { src: "/logos/disney.png", fit: "cover", plate: "#041824" },
-  tabii: { src: "/logos/tabii.png", fit: "cover", plate: "#FFFFFF" },
-};
-
 function BrandTile({
   design,
   app,
@@ -437,6 +373,7 @@ function BrandTile({
   focusKey,
   onActivate,
   className,
+  compact = false,
 }: {
   design: HomeDesign;
   app: HomeDesign["apps"][number];
@@ -444,58 +381,51 @@ function BrandTile({
   focusKey: string | null;
   onActivate: (key: string) => void;
   className: string;
+  compact?: boolean;
 }) {
   const kind = appMarkKind(app.id, app.name);
   const color = APP_COLORS[app.colorId];
   const fill = tileFill(kind, design.tiles, design.logoColor, color.swatch);
-  const ink = tileInk(fill);
+  const ink = kind === "letter" && design.tiles === "marka" && design.logoColor === "marka" ? color.ink : tileInk(fill);
   const mark = glyphFill(kind, design.tiles, design.logoColor, color.ink);
   const label = app.name.trim() || "Adsız";
-  const nameSize = featured ? "text-[2.08cqw]" : "text-[1.56cqw]";
-  const logo = design.labels === "ad" ? undefined : BRAND_LOGOS[kind];
+  const nameSize = compact ? "text-[0.95cqw]" : featured ? "text-[1.55cqw]" : "text-[1.22cqw]";
   return (
     <TvButton
       itemKey={appKey(app.id)}
       focused={focusKey === appKey(app.id)}
       onActivate={onActivate}
       mark={kind}
-      className={`tv-glow relative overflow-hidden rounded-[1.46cqw] text-left ${className}`}
-      style={{ background: logo ? logo.plate : fill }}
+      label={label}
+      className={`tv-glow relative overflow-hidden rounded-[1.46cqw] border border-white/15 text-left backdrop-blur-2xl ${className}`}
+      style={{
+        backgroundColor: fill,
+        backgroundImage: "linear-gradient(145deg, rgba(255,255,255,0.13), rgba(255,255,255,0.015) 48%, rgba(0,0,0,0.08))",
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.2), 0 12px 30px rgba(0,0,0,0.16)",
+      }}
     >
-      {logo ? (
-        <img
-          src={logo.src}
-          alt={label}
-          className={
-            logo.fit === "cover"
-              ? "absolute inset-0 h-full w-full object-cover"
-              : "absolute inset-0 m-auto h-[86%] w-auto max-w-[92%] object-contain"
-          }
-        />
-      ) : (
-        <span className="flex h-full flex-col justify-between p-[0.7cqw]">
-          {design.labels === "ad" ? (
-            <span className={`font-sans leading-tight font-semibold ${nameSize}`} style={{ color: ink }}>
-              {label}
+      <span className={`flex h-full flex-col items-center justify-center ${compact ? "gap-[0.2cqw] p-[0.45cqw]" : "gap-[0.45cqw] p-[0.8cqw]"}`}>
+        {design.labels === "ad" ? (
+          <span className={`max-w-full truncate font-sans leading-tight font-semibold ${nameSize}`} style={{ color: ink }}>
+            {label}
+          </span>
+        ) : (
+          <span className="flex min-h-0 w-full flex-1 items-center justify-center">
+            <span className={`block h-full max-h-full ${kind === "ayarlar" ? "aspect-square max-w-[40%]" : kind === "netflix" || kind === "youtube" ? "w-[65%]" : "w-[91%]"}`}>
+              <AppGlyphMark
+                kind={kind}
+                fill={mark}
+                letter={label.slice(0, 1).toLocaleUpperCase("tr-TR")}
+              />
             </span>
-          ) : (
-            <span className="flex flex-1 items-center justify-center px-[0.6cqw]">
-              <span className={featured ? "h-[7.2cqh] w-[78%]" : "h-[5.4cqh] w-[86%]"}>
-                <AppGlyphMark
-                  kind={kind}
-                  fill={mark}
-                  letter={label.slice(0, 1).toLocaleUpperCase("tr-TR")}
-                />
-              </span>
-            </span>
-          )}
-          {design.labels === "logo" || (kind !== "letter" && kind !== "ayarlar") ? null : (
-            <span className={`truncate font-semibold ${nameSize}`} style={{ color: ink }}>
-              {label}
-            </span>
-          )}
-        </span>
-      )}
+          </span>
+        )}
+        {design.labels === "logo-ad" ? (
+          <span className={`max-w-full shrink-0 truncate font-semibold ${nameSize}`} style={{ color: ink }}>
+            {label}
+          </span>
+        ) : null}
+      </span>
     </TvButton>
   );
 }
@@ -515,8 +445,9 @@ function MosaicLayout({
   now,
 }: TvScreenProps & { now: Date | null }) {
   const slots = mosaicSlots(design.apps);
-  const lead = slots.filter((slot) => slot.featured).sort((a, b) => a.column - b.column);
-  const rest = slots.filter((slot) => !slot.featured).sort((a, b) => a.column - b.column);
+  const rows = [...new Set(slots.map((slot) => slot.row))]
+    .sort((left, right) => left - right)
+    .map((row) => slots.filter((slot) => slot.row === row).sort((left, right) => left.column - right.column));
   return (
     <div className="relative h-full">
       {design.showClock ? (
@@ -524,38 +455,25 @@ function MosaicLayout({
           <ClockBlock now={now} align="start" mosaic />
         </div>
       ) : null}
-      <div className="absolute top-[42.22cqh] left-[5cqw] flex flex-col gap-[2.22cqh]">
+      <div className="absolute top-[42.22cqh] bottom-[10cqh] left-[5cqw] flex w-[90cqw] flex-col gap-[2.22cqh] overflow-y-auto overflow-x-hidden p-[0.65cqw] -m-[0.65cqw] [scrollbar-width:none]">
         {slots.length === 0 ? (
           <p className="text-[1.5cqw] font-semibold text-white">Uygulama seçilmedi.</p>
         ) : (
-          <>
-            <div className="flex gap-[1.25cqw]">
-              {lead.map((slot) => (
+          rows.map((row, index) => (
+            <div key={index} className="grid shrink-0 gap-[1.25cqw]" style={{ gridTemplateColumns: `repeat(${row[0]?.featured ? 2 : 4}, minmax(0, 1fr))` }}>
+              {row.map((slot) => (
                 <BrandTile
                   key={slot.app.id}
                   design={design}
                   app={slot.app}
-                  featured
+                  featured={slot.featured}
                   focusKey={focusKey}
                   onActivate={onActivate}
-                  className="h-[23.7cqh] w-[44.375cqw]"
+                  className={slot.featured ? "h-[23.7cqh] w-full" : "h-[17.04cqh] w-full"}
                 />
               ))}
             </div>
-            <div className="flex gap-[1.25cqw]">
-              {rest.map((slot) => (
-                <BrandTile
-                  key={slot.app.id}
-                  design={design}
-                  app={slot.app}
-                  featured={false}
-                  focusKey={focusKey}
-                  onActivate={onActivate}
-                  className="h-[17.04cqh] w-[21.56cqw]"
-                />
-              ))}
-            </div>
-          </>
+          ))
         )}
       </div>
       <HelpLine />
@@ -583,35 +501,24 @@ function ScreenBody(props: TvScreenProps & { now: Date | null }) {
 export function TvScreen(props: TvScreenProps) {
   const now = useNow();
   const lamp = Math.min(100, Math.max(0, props.design.lamp)) / 100;
-  const photo =
-    props.design.wallpaper.type === "preset" &&
-    (props.design.wallpaper.presetId === "sonbahar-bahce" ||
-      props.design.wallpaper.presetId === "istanbul-aksam");
-  const scrim = photo
-    ? "linear-gradient(180deg, #0B0F1499 0%, transparent 22%, #0B0F1466 58%, #0B0F14cc 100%)"
-    : "linear-gradient(180deg, #0B0F1466 0%, transparent 32%, #0B0F14aa 100%)";
+  const scrim = "linear-gradient(180deg, rgba(5,10,18,0.24) 0%, transparent 34%, rgba(5,10,18,0.12) 67%, rgba(5,10,18,0.35) 100%)";
+  const font = props.design.fontStyle === "yumusak" ? "var(--font-nunito-sans)" : "var(--font-inter)";
   return (
     <div
       className="relative h-full w-full overflow-hidden bg-background font-sans text-foreground [container-type:size]"
       data-font={props.design.fontStyle}
-      style={
-        props.design.fontStyle === "yumusak"
-          ? { fontFamily: "var(--font-soft), sans-serif" }
-          : undefined
-      }
+      style={{ "--font-body": font, fontFamily: `${font}, sans-serif` } as CSSProperties}
     >
       <div
         className="absolute inset-0"
         style={{ background: wallpaperCss(props.design.wallpaper) }}
       />
-      {photo ? null : (
-        <div
-          className="lamp-glow pointer-events-none absolute inset-0"
-          style={{
-            background: `radial-gradient(78% 48% at 72% -8%, oklch(0.95 0.01 260 / ${0.55 * lamp}), transparent 68%)`,
-          }}
-        />
-      )}
+      <div
+        className="lamp-glow pointer-events-none absolute inset-0"
+        style={{
+          background: `radial-gradient(78% 64% at 72% -8%, rgba(255,224,181,${0.55 * lamp}), transparent 72%)`,
+        }}
+      />
       <div
         className="pointer-events-none absolute inset-0"
         style={{ background: scrim }}

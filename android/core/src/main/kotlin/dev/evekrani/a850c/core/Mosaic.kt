@@ -8,16 +8,6 @@ data class MosaicSlot(
     val featured: Boolean,
 )
 
-private data class Place(val column: Int, val row: Int)
-
-private val smallPlaces = listOf(
-    Place(3, 1),
-    Place(2, 2),
-    Place(4, 1),
-    Place(3, 2),
-    Place(4, 2),
-)
-
 fun mosaicSlots(apps: List<DockApp>): List<MosaicSlot> {
     val netflix = apps.firstOrNull { appMark(it) == AppMark.NETFLIX }
     val youtube = apps.firstOrNull { appMark(it) == AppMark.YOUTUBE }
@@ -43,41 +33,32 @@ fun mosaicSlots(apps: List<DockApp>): List<MosaicSlot> {
         slots += MosaicSlot(netflix, column = lead, row = 1, tall = false, featured = true)
     }
     rest.forEachIndexed { index, app ->
-        if (netflix != null && youtube != null && index < 4) {
-            slots += MosaicSlot(app, column = index + 1, row = 2, tall = false, featured = false)
-        } else {
-            val placed = smallPlaces.getOrNull(index)
-            if (placed != null && netflix == null) {
-                slots += MosaicSlot(app, placed.column, placed.row, tall = false, featured = false)
-            } else {
-                val column = (index % 4) + 1
-                val row = index / 4 + 2
-                slots += MosaicSlot(app, column, row, tall = false, featured = false)
-            }
-        }
+        slots += MosaicSlot(app, column = (index % 4) + 1, row = index / 4 + 2,
+            tall = false, featured = false)
     }
     return slots
 }
 
 fun tileFill(app: DockApp, tiles: TileStyle, logo: LogoColor): Int {
     if (tiles == TileStyle.SADE) {
-        return 0xF22A2A2E.toInt()
+        return 0x1AFFFFFF
     }
     if (logo == LogoColor.TEK) {
-        return 0xFFF4F4F5.toInt()
+        return 0xFF252C38.toInt()
     }
     return when (appMark(app)) {
-        AppMark.YOUTUBE -> 0xFFFFFFFF.toInt()
-        AppMark.NETFLIX -> 0xFFFFFFFF.toInt()
-        AppMark.DISNEY -> 0xFF1236C9.toInt()
-        AppMark.BLUTV -> 0xFF0A4DFF.toInt()
-        AppMark.TABII -> 0xFF0E8F62.toInt()
-        AppMark.AYARLAR -> 0xFF3A3A3E.toInt()
+        AppMark.YOUTUBE -> 0xFFFF0033.toInt()
+        AppMark.NETFLIX -> 0xFF141418.toInt()
+        AppMark.DISNEY -> 0xFF102657.toInt()
+        AppMark.BLUTV -> 0xFF087BCD.toInt()
+        AppMark.TABII -> 0xFF047A55.toInt()
+        AppMark.AYARLAR -> 0xFF39424F.toInt()
         AppMark.LETTER -> app.colorId.swatch
     }
 }
 
 fun tileInk(fill: Int): Int {
+    if ((fill ushr 24) < 64) return 0xFFFFFFFF.toInt()
     val red = (fill shr 16) and 0xFF
     val green = (fill shr 8) and 0xFF
     val blue = fill and 0xFF
@@ -102,9 +83,7 @@ fun glyphInk(app: DockApp, tiles: TileStyle, logo: LogoColor): Int {
         }
     }
     return when (appMark(app)) {
-        AppMark.YOUTUBE -> 0xFFFF0000.toInt()
-        AppMark.NETFLIX -> 0xFFE50914.toInt()
-        AppMark.DISNEY, AppMark.BLUTV, AppMark.TABII, AppMark.AYARLAR -> 0xFFFFFFFF.toInt()
+        AppMark.YOUTUBE, AppMark.NETFLIX, AppMark.DISNEY, AppMark.BLUTV, AppMark.TABII, AppMark.AYARLAR -> 0xFFFFFFFF.toInt()
         AppMark.LETTER -> app.colorId.ink
     }
 }

@@ -20,13 +20,19 @@ import android.util.Base64
 import android.view.KeyEvent
 import android.view.View
 import dev.evekrani.a850c.core.AppMark
+import dev.evekrani.a850c.core.AppColorId
 import dev.evekrani.a850c.core.Box
 import dev.evekrani.a850c.core.Direction
+import dev.evekrani.a850c.core.DockApp
 import dev.evekrani.a850c.core.DrawOp
 import dev.evekrani.a850c.core.FocusTarget
 import dev.evekrani.a850c.core.FontStyle
 import dev.evekrani.a850c.core.FontRole
 import dev.evekrani.a850c.core.HomeDesign
+import dev.evekrani.a850c.core.LabelMode
+import dev.evekrani.a850c.core.LayoutId
+import dev.evekrani.a850c.core.LogoColor
+import dev.evekrani.a850c.core.TileStyle
 import dev.evekrani.a850c.core.Palette
 import dev.evekrani.a850c.core.appMark
 import dev.evekrani.a850c.core.focusKeyForMark
@@ -48,9 +54,14 @@ import dev.evekrani.a850c.core.formatIstanbulDate
 import dev.evekrani.a850c.core.formatIstanbulTime
 import dev.evekrani.a850c.core.layoutScene
 import dev.evekrani.a850c.core.moveFocus
+import dev.evekrani.a850c.core.mergeAppCatalog
+import dev.evekrani.a850c.core.parseDesign
+import dev.evekrani.a850c.core.serializeDesign
 import dev.evekrani.a850c.core.selectionCaption
 import dev.evekrani.a850c.core.wrapText
 import java.util.concurrent.Executors
+import org.json.JSONArray
+import org.json.JSONObject
 import kotlin.math.abs
 import kotlin.math.sin
 
@@ -91,11 +102,24 @@ class HomeView(context: Context) : View(context) {
     private var wallpaperKey: String? = null
     private var decodeGeneration = 0
     private val vectors = HashMap<String, Drawable>()
-    private var gardenBitmap: Bitmap? = null
+    private var presetBitmap: Bitmap? = null
+    private var presetBitmapPath: String? = null
+    private var glassBitmap: Bitmap? = null
+    private var glassSource: Bitmap? = null
+    private var backdropWidth = 1f
+    private var backdropHeight = 1f
     private var appliedFont: FontStyle? = null
     private val launcherIcons = mutableMapOf<AppMark, Bitmap>()
     private var remoteBase: String? = null
     private var remoteClient: RemoteClient? = null
+    private val preferences = context.getSharedPreferences("home-design", Context.MODE_PRIVATE)
+    private var appCatalog = emptyList<DockApp>()
+    private var settingsOpen = false
+    private var settingsIndex = 0
+    private var phoneAvailable = false
+    private var phoneConnected = false
+    internal var onPairRequested: (() -> Unit)? = null
+    internal var onDesignChanged: ((HomeDesign) -> Unit)? = null
 
     private val clockTick = object : Runnable {
         override fun run() {
@@ -128,9 +152,9 @@ class HomeView(context: Context) : View(context) {
         }
         setBackgroundColor(Palette.background)
         contentDescription = "Ev ekranı"
-        displayPaint.typeface = loadFont(context, "fonts/Figtree.ttf", "'wght' 340")
+        displayPaint.typeface = loadFont(context, "fonts/Inter.ttf", "'wght' 300")
             ?: Typeface.SANS_SERIF
-        bodyPaint.typeface = loadFont(context, "fonts/Figtree.ttf", "'wght' 480")
+        bodyPaint.typeface = loadFont(context, "fonts/Inter.ttf", "'wght' 500")
             ?: Typeface.SANS_SERIF
         val now = System.currentTimeMillis()
         timeText = formatIstanbulTime(now)
@@ -145,6 +169,19 @@ class HomeView(context: Context) : View(context) {
     fun onRemote(event: KeyEvent): Boolean {
         if (event.action != KeyEvent.ACTION_DOWN) {
             return false
+        }
+        if (event.keyCode == KeyEvent.KEYCODE_MENU) {
+            if (event.repeatCount == 0) onPairRequested?.invoke()
+            return true
+        }
+        if (event.keyCode == KeyEvent.KEYCODE_SETTINGS) {
+            settingsOpen = true
+            settingsIndex = 0
+            invalidate()
+            return true
+        }
+        if (settingsOpen) {
+            return handleSettingsKey(event.keyCode, event.repeatCount)
         }
         val overlayOpen = overlay
         if (overlayOpen != null) {
@@ -194,6 +231,11 @@ class HomeView(context: Context) : View(context) {
     }
 
     fun handleBack(): Boolean {
+        if (settingsOpen) {
+            settingsOpen = false
+            invalidate()
+            return true
+        }
         if (overlay != null) {
             overlay = null
             invalidate()
@@ -221,6 +263,41 @@ class HomeView(context: Context) : View(context) {
     }
 
     internal fun applyRemote(command: String) {
+        if (command == "home") {
+            settingsOpen = false
+            overlay = null
+            focusKey = if (design.layout == LayoutId.SAAT) null else firstFocusKey(buildFocusMap(design))
+            invalidate()
+            return
+        }
+        if (command == "back") {
+            handleBack()
+            return
+        }
+        if (command == "youtube" || command == "netflix") {
+            settingsOpen = false
+            overlay = null
+            val mark = if (command == "youtube") AppMark.YOUTUBE else AppMark.NETFLIX
+            jumpTo(mark)
+            if (!launchMark(mark)) {
+                overlay = Overlay(if (mark == AppMark.YOUTUBE) "YouTube" else "Netflix",
+                    "Bu uygulama bu televizyonda yüklü değil.")
+                invalidate()
+            }
+            return
+        }
+        if (settingsOpen) {
+            val code = when (command) {
+                "left" -> KeyEvent.KEYCODE_DPAD_LEFT
+                "right" -> KeyEvent.KEYCODE_DPAD_RIGHT
+                "up" -> KeyEvent.KEYCODE_DPAD_UP
+                "down" -> KeyEvent.KEYCODE_DPAD_DOWN
+                "enter" -> KeyEvent.KEYCODE_DPAD_CENTER
+                else -> return
+            }
+            handleSettingsKey(code, 0)
+            return
+        }
         if (overlay != null && command != "enter") {
             return
         }
@@ -244,6 +321,32 @@ class HomeView(context: Context) : View(context) {
     }
 
     internal fun currentFocusKey(): String? = focusKey
+
+    internal fun currentDesign(): HomeDesign = design
+
+    internal fun setPhoneConnection(available: Boolean, connected: Boolean) {
+        phoneAvailable = available
+        phoneConnected = connected
+        invalidate()
+    }
+
+    internal fun applyEditedDesign(next: HomeDesign) {
+        val keepSettingsOpen = settingsOpen
+        val sourceFingerprint = fingerprint
+        appCatalog = mergeAppCatalog(next.apps, appCatalog)
+        val catalog = JSONArray().apply {
+            appCatalog.forEach { app -> put(JSONObject().apply {
+                put("id", app.id)
+                put("name", app.name)
+                put("colorId", app.colorId.wire)
+            }) }
+        }
+        preferences.edit().putString("source", sourceFingerprint)
+            .putString("design", serializeDesign(next)).putString("catalog", catalog.toString()).apply()
+        apply(LoadedDesign(next, null, sourceFingerprint), useSaved = false)
+        settingsOpen = keepSettingsOpen
+        onDesignChanged?.invoke(next)
+    }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
@@ -275,14 +378,27 @@ class HomeView(context: Context) : View(context) {
         val scene = scene(frame.width, frame.height)
         drawOps(canvas, scene.ops, scene)
         drawFocus(canvas, scene, frame.width)
+        if (design.layout != LayoutId.SINEMA) {
+            val size = cqw(frame.width, 1.25f)
+            val metrics = measurer.measure("Tamam: Aç · Yön tuşları: Gezin", size, FontRole.BODY, 0f)
+            drawText(canvas, DrawOp.Text("Tamam: Aç · Yön tuşları: Gezin", frame.width * 0.05f,
+                frame.height * 0.978f - metrics.descent, size, 0xFFC5CED8.toInt(), FontRole.BODY, TextAlign.LEFT, 0f))
+        }
         drawNotice(canvas, frame.width, frame.height)
         drawOverlay(canvas, frame.width, frame.height)
+        drawSettings(canvas, frame.width, frame.height)
         canvas.restoreToCount(save)
     }
 
-    private fun apply(loaded: LoadedDesign) {
+    private fun apply(source: LoadedDesign, useSaved: Boolean = true) {
+        val saved = if (useSaved && preferences.getString("source", null) == source.fingerprint) {
+            preferences.getString("design", null)?.let { runCatching { parseDesign(it) }.getOrNull() }
+        } else null
+        val loaded = if (saved != null) source.copy(design = saved) else source
+        val remembered = if (preferences.getString("source", null) == source.fingerprint) readAppCatalog() else emptyList()
+        appCatalog = mergeAppCatalog(loaded.design.apps, remembered + source.design.apps)
         applyFont(loaded.design.fontStyle)
-        val iconsChanged = refreshLauncherIcons()
+        val iconsChanged = if (useSaved) refreshLauncherIcons() else false
         if (loaded.fingerprint == fingerprint && loaded.notice == notice && loaded.design == design) {
             if (iconsChanged) {
                 invalidate()
@@ -295,7 +411,9 @@ class HomeView(context: Context) : View(context) {
         notice = loaded.notice
         fingerprint = loaded.fingerprint
         val map = buildFocusMap(design)
-        focusKey = if (previousKey != null && focusMapHas(map, previousKey)) {
+        focusKey = if (design.layout == LayoutId.SAAT && (previous.layout != LayoutId.SAAT || previousKey == null)) {
+            null
+        } else if (previousKey != null && focusMapHas(map, previousKey)) {
             previousKey
         } else {
             firstFocusKey(map)
@@ -315,10 +433,19 @@ class HomeView(context: Context) : View(context) {
 
     private fun showSelection() {
         val key = focusKey ?: return
+        val target = parseFocusKey(key) as? FocusTarget.App
+        if (target != null && design.apps.firstOrNull { it.id == target.appId }?.let(::appMark) == AppMark.AYARLAR) {
+            settingsOpen = true
+            settingsIndex = 0
+            invalidate()
+            return
+        }
         if (launchInstalled(key)) {
             return
         }
-        overlay = Overlay(focusTitle(design, key), selectionCaption(key))
+        overlay = Overlay(focusTitle(design, key), if (target != null) {
+            "Bu uygulama bu televizyonda yüklü değil."
+        } else selectionCaption(key))
         invalidate()
     }
 
@@ -342,7 +469,11 @@ class HomeView(context: Context) : View(context) {
     private fun launchInstalled(key: String): Boolean {
         val target = parseFocusKey(key) as? FocusTarget.App ?: return false
         val app = design.apps.firstOrNull { it.id == target.appId } ?: return false
-        val packages = PACKAGES[appMark(app)] ?: return false
+        return launchMark(appMark(app))
+    }
+
+    private fun launchMark(mark: AppMark): Boolean {
+        val packages = PACKAGES[mark] ?: return false
         val manager = context.packageManager
         for (name in packages) {
             val intent = try {
@@ -458,29 +589,26 @@ class HomeView(context: Context) : View(context) {
             return
         }
         appliedFont = style
-        val file = if (style == FontStyle.YUMUSAK) "fonts/Fraunces.ttf" else "fonts/Figtree.ttf"
-        val displayVariation = if (style == FontStyle.YUMUSAK) "'SOFT' 70, 'opsz' 48, 'wght' 460" else "'wght' 340"
-        val bodyVariation = if (style == FontStyle.YUMUSAK) "'SOFT' 40, 'opsz' 18, 'wght' 520" else "'wght' 480"
+        val file = if (style == FontStyle.YUMUSAK) "fonts/NunitoSans.ttf" else "fonts/Inter.ttf"
+        val displayVariation = "'wght' 300"
+        val bodyVariation = "'wght' 500"
         displayPaint.typeface = loadFont(context, file, displayVariation) ?: Typeface.SANS_SERIF
         bodyPaint.typeface = loadFont(context, file, bodyVariation) ?: Typeface.SANS_SERIF
     }
 
-    private fun gardenBitmap(): Bitmap? {
-        val cached = gardenBitmap
-        if (cached != null && !cached.isRecycled) {
+    private fun presetBitmap(preset: WallpaperPresetId): Bitmap? {
+        val path = "wallpapers/${preset.wire}.jpg"
+        val cached = presetBitmap
+        if (presetBitmapPath == path && cached != null && !cached.isRecycled) {
             return cached
         }
+        presetBitmapPath = path
+        presetBitmap = null
+        cached?.recycle()
         return try {
-            val file = if (design.wallpaper is Wallpaper.Preset &&
-                (design.wallpaper as Wallpaper.Preset).presetId == WallpaperPresetId.ISTANBUL_AKSAM
-            ) {
-                "wallpapers/istanbul-aksam.jpg"
-            } else {
-                "wallpapers/sonbahar-bahce.jpg"
-            }
-            context.assets.open(file).use { stream ->
+            context.assets.open(path).use { stream ->
                 BitmapFactory.decodeStream(stream)
-            }?.also { gardenBitmap = it }
+            }?.also { presetBitmap = it }
         } catch (_: Exception) {
             null
         }
@@ -499,17 +627,13 @@ class HomeView(context: Context) : View(context) {
     }
 
     private fun drawBackdrop(canvas: Canvas, width: Float, height: Float) {
+        backdropWidth = width
+        backdropHeight = height
         when (val paper = design.wallpaper) {
             is Wallpaper.Preset -> {
-                if (paper.presetId == WallpaperPresetId.SONBAHAR_BAHCE ||
-                    paper.presetId == WallpaperPresetId.ISTANBUL_AKSAM
-                ) {
-                    val photo = gardenBitmap()
-                    if (photo != null) {
-                        wallpaperPainter.drawCover(canvas, photo, width, height)
-                    } else {
-                        wallpaperPainter.drawPreset(canvas, paper.presetId, width, height)
-                    }
+                val photo = presetBitmap(paper.presetId)
+                if (photo != null) {
+                    wallpaperPainter.drawCover(canvas, photo, width, height)
                 } else {
                     wallpaperPainter.drawPreset(canvas, paper.presetId, width, height)
                 }
@@ -530,14 +654,9 @@ class HomeView(context: Context) : View(context) {
         } else {
             1.0
         }
-        val garden = design.wallpaper is Wallpaper.Preset &&
-            (design.wallpaper as Wallpaper.Preset).presetId == WallpaperPresetId.SONBAHAR_BAHCE ||
-            (design.wallpaper as Wallpaper.Preset).presetId == WallpaperPresetId.ISTANBUL_AKSAM
-        if (!garden) {
-            val lamp = (design.lamp / 100.0).coerceIn(0.0, 1.0) * breathe * 0.55
-            wallpaperPainter.drawLamp(canvas, width, height, lamp)
-        }
-        wallpaperPainter.drawScrim(canvas, width, height, if (garden) 0.45f else 1f)
+        val lamp = (design.lamp / 100.0).coerceIn(0.0, 1.0) * breathe * 0.55
+        wallpaperPainter.drawLamp(canvas, width, height, lamp)
+        wallpaperPainter.drawScrim(canvas, width, height)
         wallpaperPainter.drawGrain(canvas, width, height)
     }
 
@@ -572,16 +691,73 @@ class HomeView(context: Context) : View(context) {
 
     private fun drawRound(canvas: Canvas, op: DrawOp.RoundRect) {
         val rect = op.box.toRectF()
+        if ((op.color ushr 24) in 1..63) drawGlassBackdrop(canvas, rect, op.radius)
         fillPaint.shader = null
         fillPaint.style = Paint.Style.FILL
         fillPaint.color = op.color
         canvas.drawRoundRect(rect, op.radius, op.radius, fillPaint)
+        if ((op.color ushr 24) in 1..63) {
+            fillPaint.shader = LinearGradient(rect.left, rect.top, rect.right, rect.bottom,
+                0x18FFFFFF, 0x03FFFFFF, Shader.TileMode.CLAMP)
+            canvas.drawRoundRect(rect, op.radius, op.radius, fillPaint)
+            fillPaint.shader = null
+            fillPaint.style = Paint.Style.STROKE
+            fillPaint.strokeWidth = (width * 0.0008f).coerceAtLeast(1f)
+            fillPaint.color = 0x30FFFFFF
+            canvas.drawRoundRect(rect, op.radius, op.radius, fillPaint)
+            fillPaint.style = Paint.Style.FILL
+        }
         if (op.strokeWidth > 0f) {
             fillPaint.style = Paint.Style.STROKE
             fillPaint.strokeWidth = op.strokeWidth
             fillPaint.color = op.strokeColor
             canvas.drawRoundRect(rect, op.radius, op.radius, fillPaint)
         }
+    }
+
+    private fun drawGlassBackdrop(canvas: Canvas, rect: RectF, radius: Float) {
+        val source = when (design.wallpaper) {
+            is Wallpaper.Preset -> presetBitmap
+            is Wallpaper.Image -> wallpaperBitmap
+        } ?: return
+        if (source.isRecycled) return
+        if (glassSource !== source || glassBitmap == null) {
+            glassBitmap?.recycle()
+            val sampleWidth = 128
+            val sampleHeight = (sampleWidth * backdropHeight / backdropWidth).toInt().coerceAtLeast(1)
+            val blurred = Bitmap.createBitmap(sampleWidth, sampleHeight, Bitmap.Config.ARGB_8888)
+            wallpaperPainter.drawCover(Canvas(blurred), source, sampleWidth.toFloat(), sampleHeight.toFloat())
+            val pixels = IntArray(sampleWidth * sampleHeight)
+            blurred.getPixels(pixels, 0, sampleWidth, 0, 0, sampleWidth, sampleHeight)
+            var input = pixels
+            repeat(3) {
+                val output = IntArray(input.size)
+                for (y in 0 until sampleHeight) for (x in 0 until sampleWidth) {
+                    var red = 0
+                    var green = 0
+                    var blue = 0
+                    var count = 0
+                    for (dy in -2..2) for (dx in -2..2) {
+                        val color = input[(y + dy).coerceIn(0, sampleHeight - 1) * sampleWidth +
+                            (x + dx).coerceIn(0, sampleWidth - 1)]
+                        red += (color ushr 16) and 255
+                        green += (color ushr 8) and 255
+                        blue += color and 255
+                        count++
+                    }
+                    output[y * sampleWidth + x] = 0xFF000000.toInt() or
+                        ((red / count) shl 16) or ((green / count) shl 8) or (blue / count)
+                }
+                input = output
+            }
+            blurred.setPixels(input, 0, sampleWidth, 0, 0, sampleWidth, sampleHeight)
+            glassBitmap = blurred
+            glassSource = source
+        }
+        val save = canvas.save()
+        canvas.clipPath(Path().apply { addRoundRect(rect, radius, radius, Path.Direction.CW) })
+        canvas.drawBitmap(glassBitmap!!, null, RectF(0f, 0f, backdropWidth, backdropHeight), bitmapPaint)
+        canvas.restoreToCount(save)
     }
 
     private fun drawPoster(canvas: Canvas, op: DrawOp.Poster) {
@@ -654,7 +830,9 @@ class HomeView(context: Context) : View(context) {
     }
 
     private fun drawMark(canvas: Canvas, op: DrawOp.Mark) {
-        val installed = launcherIcons[op.kind]
+        val installed = if (design.tiles == TileStyle.MARKA && design.logoColor == LogoColor.MARKA) {
+            launcherIcons[op.kind]
+        } else null
         if (installed != null && !installed.isRecycled) {
             val side = minOf(op.box.width, op.box.height)
             val left = op.box.left + (op.box.width - side) / 2f
@@ -668,23 +846,33 @@ class HomeView(context: Context) : View(context) {
             canvas.restoreToCount(save)
             return
         }
-        val word = if (op.glyphOnly) brandWord(op.kind) else null
+        val word = if (op.kind in listOf(AppMark.DISNEY, AppMark.BLUTV, AppMark.TABII)) brandWord(op.kind) else null
         if (word != null) {
-            val size = op.box.height * 0.62f
-            val metrics = measurer.measure(word, size, FontRole.BODY, 0f)
-            drawText(
-                canvas,
-                DrawOp.Text(
-                    text = word,
-                    x = op.box.left + op.box.width / 2f,
-                    baseline = op.box.top + (op.box.height - metrics.height) / 2f + metrics.ascent,
-                    size = size,
-                    color = op.ink,
-                    role = FontRole.BODY,
-                    align = TextAlign.CENTER,
-                    trackingEm = 0f,
-                ),
-            )
+            if (!op.glyphOnly) drawRound(canvas, DrawOp.RoundRect(op.box, op.fill, op.radius))
+            val paint = Paint(bodyPaint).apply {
+                typeface = if (op.kind == AppMark.DISNEY) Typeface.create("serif", Typeface.BOLD_ITALIC)
+                    else Typeface.create("sans-serif", Typeface.BOLD)
+                color = op.ink
+                textAlign = Paint.Align.CENTER
+                textSize = op.box.height * if (op.kind == AppMark.DISNEY) 0.48f else 0.58f
+            }
+            paint.textSize *= minOf(1f, op.box.width * 0.92f / paint.measureText(word).coerceAtLeast(1f))
+            val metrics = paint.fontMetrics
+            val baseline = op.box.top + (op.box.height - metrics.ascent - metrics.descent) / 2f
+            canvas.drawText(word, op.box.left + op.box.width / 2f, baseline, paint)
+            if (op.kind == AppMark.DISNEY) {
+                paint.style = Paint.Style.STROKE
+                paint.strokeWidth = (op.box.height * 0.025f).coerceAtLeast(1.5f)
+                paint.strokeCap = Paint.Cap.ROUND
+                val textWidth = paint.measureText(word)
+                val center = op.box.left + op.box.width / 2f
+                val arc = Path().apply {
+                    moveTo(center - textWidth * 0.46f, baseline + metrics.ascent * 0.85f)
+                    quadTo(center, baseline + metrics.ascent * 1.8f,
+                        center + textWidth * 0.4f, baseline + metrics.ascent * 0.82f)
+                }
+                canvas.drawPath(arc, paint)
+            }
             return
         }
         val drawable = markDrawable(op.kind, op.glyphOnly)
@@ -888,6 +1076,146 @@ class HomeView(context: Context) : View(context) {
         )
     }
 
+    private fun readAppCatalog(): List<DockApp> = runCatching {
+        val entries = JSONArray(preferences.getString("catalog", "[]") ?: "[]")
+        buildList {
+            for (index in 0 until minOf(entries.length(), 48)) {
+                val app = entries.optJSONObject(index) ?: continue
+                val color = AppColorId.fromWire(app.optString("colorId")) ?: continue
+                val id = app.optString("id")
+                val name = app.optString("name")
+                if (id.isNotEmpty() && name.isNotEmpty()) add(DockApp(id, name, color))
+            }
+        }
+    }.getOrDefault(emptyList())
+
+    private fun settingsApps(): List<DockApp> = appCatalog
+
+    private fun settingsRows(): List<Pair<String, String>> {
+        val paper = (design.wallpaper as? Wallpaper.Preset)?.presetId
+        return listOf(
+            "Tasarım" to when (design.layout) {
+                LayoutId.MOZAIK -> "Mozaik"
+                LayoutId.SALON -> "Dock"
+                LayoutId.SINEMA -> "Sinema"
+                LayoutId.SAAT -> "Saat"
+            },
+            "Arka plan" to (paper?.let { WALLPAPER_NAMES[it] } ?: "Kendi fotoğrafım"),
+            "Karolar" to if (design.tiles == TileStyle.MARKA) "Marka renkleri" else "Sade",
+            "Etiketler" to when (design.labels) {
+                LabelMode.LOGO_AD -> "Logo ve ad"
+                LabelMode.LOGO -> "Yalnız logo"
+                LabelMode.AD -> "Yalnız ad"
+            },
+            "Logo rengi" to if (design.logoColor == LogoColor.MARKA) "Marka renkleri" else "Tek renk",
+            "Yazı tipi" to if (design.fontStyle == FontStyle.MODERN) "Modern" else "Yumuşak",
+            "Saat" to if (design.showClock) "Göster" else "Gizle",
+            "Lamba" to "%${design.lamp}",
+        ) + settingsApps().map { app ->
+            app.name to if (design.apps.any { it.id == app.id }) "Göster" else "Gizle"
+        } + listOf(
+            "Telefonla bağlan" to if (phoneConnected) "Bağlı" else if (phoneAvailable) "QR kodu göster" else "Bağlantıyı aç",
+            "Tamam" to "Ekrana dön",
+        )
+    }
+
+    private fun handleSettingsKey(code: Int, repeat: Int): Boolean {
+        val rows = settingsRows()
+        when (code) {
+            KeyEvent.KEYCODE_BACK, KeyEvent.KEYCODE_ESCAPE -> settingsOpen = false
+            KeyEvent.KEYCODE_DPAD_UP -> settingsIndex = (settingsIndex - 1).coerceAtLeast(0)
+            KeyEvent.KEYCODE_DPAD_DOWN -> settingsIndex = (settingsIndex + 1).coerceAtMost(rows.lastIndex)
+            KeyEvent.KEYCODE_DPAD_LEFT -> changeSetting(-1)
+            KeyEvent.KEYCODE_DPAD_RIGHT -> changeSetting(1)
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER, KeyEvent.KEYCODE_BUTTON_A -> if (repeat == 0) changeSetting(1)
+            else -> return false
+        }
+        invalidate()
+        return true
+    }
+
+    private fun changeSetting(delta: Int) {
+        val selectedAppId = settingsApps().getOrNull(settingsIndex - 8)?.id
+        fun <T> next(options: List<T>, current: T): T =
+            options[Math.floorMod(options.indexOf(current) + delta, options.size)]
+        val next = when (settingsIndex) {
+            0 -> design.copy(layout = next(LayoutId.entries, design.layout))
+            1 -> design.copy(wallpaper = Wallpaper.Preset(next(WallpaperPresetId.entries,
+                (design.wallpaper as? Wallpaper.Preset)?.presetId ?: WallpaperPresetId.ISTANBUL_AKSAM)))
+            2 -> design.copy(tiles = next(TileStyle.entries, design.tiles))
+            3 -> design.copy(labels = next(LabelMode.entries, design.labels))
+            4 -> design.copy(logoColor = next(LogoColor.entries, design.logoColor))
+            5 -> design.copy(fontStyle = next(FontStyle.entries, design.fontStyle))
+            6 -> design.copy(showClock = !design.showClock)
+            7 -> design.copy(lamp = (design.lamp + delta * 5).coerceIn(0, 100))
+            else -> {
+                val apps = settingsApps()
+                val index = settingsIndex - 8
+                if (index in apps.indices) {
+                    val app = apps[index]
+                    val enabled = design.apps.any { it.id == app.id }
+                    if (appMark(app) == AppMark.AYARLAR && enabled) return
+                    design.copy(apps = if (enabled) design.apps.filter { it.id != app.id }
+                        else (design.apps + app).take(dev.evekrani.a850c.core.Limits.apps))
+                } else {
+                    if (index == apps.size) {
+                        settingsOpen = false
+                        onPairRequested?.invoke()
+                    } else settingsOpen = false
+                    return
+                }
+            }
+        }
+        applyEditedDesign(next)
+        if (selectedAppId != null) {
+            settingsIndex = 8 + settingsApps().indexOfFirst { it.id == selectedAppId }.coerceAtLeast(0)
+        }
+    }
+
+    private fun drawSettings(canvas: Canvas, width: Float, height: Float) {
+        if (!settingsOpen) return
+        val rows = settingsRows()
+        settingsIndex = settingsIndex.coerceIn(0, rows.lastIndex)
+        val panel = Box(width * 0.65f, 0f, width, height)
+        fillPaint.shader = null
+        fillPaint.style = Paint.Style.FILL
+        fillPaint.color = 0x33040910
+        canvas.drawRect(0f, 0f, width, height, fillPaint)
+        drawGlassBackdrop(canvas, panel.toRectF(), 0f)
+        drawRound(canvas, DrawOp.RoundRect(panel, 0xC215202D.toInt(), 0f, 0x45FFFFFF, cqw(width, 0.07f)))
+        val pad = cqw(width, 2.5f)
+        val x = panel.left + pad
+        var y = panel.top + pad
+        fun label(text: String, left: Float, top: Float, size: Float, color: Int, align: TextAlign = TextAlign.LEFT) {
+            val metrics = measurer.measure(text, size, FontRole.BODY, 0f)
+            drawText(canvas, DrawOp.Text(text, left, top + metrics.ascent, size, color, FontRole.BODY, align, 0f))
+        }
+        label("Kendin yap", x, y, cqw(width, 2.05f), 0xFFFFFFFF.toInt())
+        y += cqw(width, 3.1f)
+        label("Sol / Sağ: Seç · Geri: Kapat", x, y, cqw(width, 1.15f), 0xBBFFFFFF.toInt())
+        y += cqw(width, 2.4f)
+        val rowHeight = cqw(width, 4.5833f)
+        val start = (settingsIndex - 3).coerceIn(0, (rows.size - 7).coerceAtLeast(0))
+        for (index in start until minOf(rows.size, start + 7)) {
+            val selected = index == settingsIndex
+            if (selected) drawRound(canvas, DrawOp.RoundRect(
+                Box(x - pad * 0.45f, y, panel.right - pad * 0.55f, y + rowHeight * 0.9f),
+                0x22FFFFFF, cqw(width, 0.65f), 0x77FFFFFF, cqw(width, 0.06f)))
+            val baselineTop = y + rowHeight * 0.22f
+            val textSize = cqw(width, 1.3542f)
+            val halfWidth = (panel.width - pad * 2f) * 0.48f
+            val title = ellipsize(rows[index].first, halfWidth) { measurer.measure(it, textSize, FontRole.BODY, 0f).width }
+            val value = ellipsize(rows[index].second, halfWidth) { measurer.measure(it, textSize, FontRole.BODY, 0f).width }
+            label(title, x, baselineTop, textSize, 0xFFFFFFFF.toInt())
+            label(value, panel.right - pad, baselineTop, textSize,
+                if (selected) 0xFFFFFFFF.toInt() else 0xBBFFFFFF.toInt(), TextAlign.RIGHT)
+            y += rowHeight
+        }
+        label("${settingsIndex + 1} / ${rows.size}   ·   Otomatik kaydedilir", x,
+            panel.bottom - pad - cqw(width, 0.5f), cqw(width, 1f), 0x99FFFFFF.toInt())
+    }
+
     private fun ensureBitmap(image: Wallpaper.Image) {
         if (image.dataUrl == wallpaperKey) {
             return
@@ -939,6 +1267,16 @@ class HomeView(context: Context) : View(context) {
     }
 
     private companion object {
+        val WALLPAPER_NAMES = mapOf(
+            WallpaperPresetId.ISTANBUL_AKSAM to "İstanbul akşamı",
+            WallpaperPresetId.SONBAHAR_BAHCE to "Sonbahar bahçesi",
+            WallpaperPresetId.SIYAH to "Siyah",
+            WallpaperPresetId.BAKIR_LAMBA to "Bakır lamba",
+            WallpaperPresetId.GECE_CAM to "Gece camı",
+            WallpaperPresetId.SOMINE to "Şömine",
+            WallpaperPresetId.ZEYTIN_GECE to "Zeytin gecesi",
+            WallpaperPresetId.KIS_AKSAMI to "Kış akşamı",
+        )
         val PACKAGES = mapOf(
             AppMark.YOUTUBE to listOf(
                 "com.google.android.youtube.tv",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -80,13 +80,19 @@ import { compressWallpaper } from "@/lib/image";
 export function DesignEditor({
   design,
   onChange,
+  defaultTab = "gorunum",
 }: {
   design: HomeDesign;
   onChange: (design: HomeDesign) => void;
+  defaultTab?: "gorunum" | "duvar" | "uygulama" | "icerik" | "dosya" | "rea";
 }) {
   const imageRef = useRef<HTMLInputElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
   const [resetOpen, setResetOpen] = useState(false);
+  const latestDesign = useRef(design);
+  useEffect(() => {
+    latestDesign.current = design;
+  }, [design]);
 
   function patch(partial: Partial<HomeDesign>) {
     onChange({ ...design, ...partial });
@@ -110,7 +116,11 @@ export function DesignEditor({
     });
   }
 
-  function patchCard(rowId: string, cardId: string, partial: Partial<ContentCard>) {
+  function patchCard(
+    rowId: string,
+    cardId: string,
+    partial: Partial<ContentCard>,
+  ) {
     onChange({
       ...design,
       rows: design.rows.map((row) =>
@@ -145,10 +155,7 @@ export function DesignEditor({
       return;
     }
     patch({
-      rows: [
-        ...design.rows,
-        { id: newId(), title: "Yeni sıra", cards: [] },
-      ],
+      rows: [...design.rows, { id: newId(), title: "Yeni sıra", cards: [] }],
     });
   }
 
@@ -158,10 +165,7 @@ export function DesignEditor({
       return;
     }
     patchRow(row.id, {
-      cards: [
-        ...row.cards,
-        { id: newId(), title: "Yeni kart", meta: "Film" },
-      ],
+      cards: [...row.cards, { id: newId(), title: "Yeni kart", meta: "Film" }],
     });
   }
 
@@ -171,7 +175,8 @@ export function DesignEditor({
     }
     try {
       const compressed = await compressWallpaper(file);
-      patch({
+      onChange({
+        ...latestDesign.current,
         wallpaper: {
           type: "image",
           dataUrl: compressed.dataUrl,
@@ -223,15 +228,13 @@ export function DesignEditor({
       toast.success("Tasarım içeri aktarıldı.");
     } catch (error) {
       toast.error(
-        error instanceof Error
-          ? error.message
-          : "Tasarım dosyası geçersiz.",
+        error instanceof Error ? error.message : "Tasarım dosyası geçersiz.",
       );
     }
   }
 
   return (
-    <Tabs defaultValue="gorunum" className="gap-4">
+    <Tabs defaultValue={defaultTab} className="gap-4">
       <div className="w-full overflow-x-auto">
         <TabsList className="w-max">
           <TabsTrigger value="gorunum">Görünüm</TabsTrigger>
@@ -261,13 +264,11 @@ export function DesignEditor({
                 }
               }}
             >
-              {LAYOUT_IDS.map(
-                (layout) => (
-                  <ToggleGroupItem key={layout} value={layout}>
-                    {layoutLabel(layout)}
-                  </ToggleGroupItem>
-                ),
-              )}
+              {LAYOUT_IDS.map((layout) => (
+                <ToggleGroupItem key={layout} value={layout}>
+                  {layoutLabel(layout)}
+                </ToggleGroupItem>
+              ))}
             </ToggleGroup>
           </CardContent>
         </Card>
@@ -365,7 +366,7 @@ export function DesignEditor({
           <CardHeader>
             <CardTitle>Hazır duvarlar</CardTitle>
             <CardDescription>
-              Varsayılan duvar siyahtır. Diğer hazır duvarlar durur.
+              Sekiz manzaradan birini seçin; önizleme hemen değişir.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -508,7 +509,9 @@ export function DesignEditor({
                         aria-label="Uygulamayı sil"
                         onClick={() =>
                           patch({
-                            apps: design.apps.filter((item) => item.id !== app.id),
+                            apps: design.apps.filter(
+                              (item) => item.id !== app.id,
+                            ),
                           })
                         }
                       >
@@ -612,7 +615,9 @@ export function DesignEditor({
                         aria-label="Sırayı yukarı taşı"
                         disabled={rowIndex === 0}
                         onClick={() =>
-                          patch({ rows: moveListItem(design.rows, rowIndex, -1) })
+                          patch({
+                            rows: moveListItem(design.rows, rowIndex, -1),
+                          })
                         }
                       >
                         <ChevronUp data-icon="inline-start" />
@@ -624,7 +629,9 @@ export function DesignEditor({
                         aria-label="Sırayı aşağı taşı"
                         disabled={rowIndex === design.rows.length - 1}
                         onClick={() =>
-                          patch({ rows: moveListItem(design.rows, rowIndex, 1) })
+                          patch({
+                            rows: moveListItem(design.rows, rowIndex, 1),
+                          })
                         }
                       >
                         <ChevronDown data-icon="inline-start" />
@@ -636,7 +643,9 @@ export function DesignEditor({
                         aria-label="Sırayı sil"
                         onClick={() =>
                           patch({
-                            rows: design.rows.filter((item) => item.id !== row.id),
+                            rows: design.rows.filter(
+                              (item) => item.id !== row.id,
+                            ),
                           })
                         }
                       >
@@ -648,7 +657,9 @@ export function DesignEditor({
                 <CardContent>
                   <FieldGroup>
                     <Field>
-                      <FieldLabel htmlFor={`row-${row.id}`}>Sıra adı</FieldLabel>
+                      <FieldLabel htmlFor={`row-${row.id}`}>
+                        Sıra adı
+                      </FieldLabel>
                       <Input
                         id={`row-${row.id}`}
                         value={row.title}
@@ -694,7 +705,11 @@ export function DesignEditor({
                                 disabled={cardIndex === 0}
                                 onClick={() =>
                                   patchRow(row.id, {
-                                    cards: moveListItem(row.cards, cardIndex, -1),
+                                    cards: moveListItem(
+                                      row.cards,
+                                      cardIndex,
+                                      -1,
+                                    ),
                                   })
                                 }
                               >
@@ -708,7 +723,11 @@ export function DesignEditor({
                                 disabled={cardIndex === row.cards.length - 1}
                                 onClick={() =>
                                   patchRow(row.id, {
-                                    cards: moveListItem(row.cards, cardIndex, 1),
+                                    cards: moveListItem(
+                                      row.cards,
+                                      cardIndex,
+                                      1,
+                                    ),
                                   })
                                 }
                               >
@@ -770,7 +789,11 @@ export function DesignEditor({
                 </CardContent>
                 {row.cards.length > 0 ? (
                   <CardFooter>
-                    <Button type="button" variant="outline" onClick={() => addCard(row)}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => addCard(row)}
+                    >
                       <Plus data-icon="inline-start" />
                       Kart ekle
                     </Button>

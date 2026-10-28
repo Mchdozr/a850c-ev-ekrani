@@ -3,8 +3,10 @@
 import { useEffect, useRef } from "react";
 
 import type { HomeDesign } from "@/lib/design";
-import { focusKeyForMark, moveFocus, type FocusMap } from "@/lib/focus";
+import { firstFocusKey, focusKeyForMark, moveFocus, type FocusMap } from "@/lib/focus";
 import { readSnapshot, type RemoteCommand } from "@/lib/remote";
+import { browserRemoteSession } from "@/lib/pairing";
+import { clockWaitingForInput } from "@/lib/tv-visibility";
 
 export function useRemoteLink(
   enabled: boolean,
@@ -33,7 +35,8 @@ export function useRemoteLink(
       return;
     }
     let stopped = false;
-    let seen = 0;
+    let seen: number | null = null;
+    const endpoint = `/api/kumanda?session=${browserRemoteSession()}`;
     let timer = 0;
 
     const reveal = (key: string) => {
@@ -59,12 +62,16 @@ export function useRemoteLink(
           return current;
         case "youtube":
         case "netflix":
+          window.dispatchEvent(new Event("tv-reveal-apps"));
           return focusKeyForMark(currentDesign, command) ?? current;
         case "up":
         case "down":
         case "left":
-        case "right":
-          return moveFocus(currentMap, current, command);
+        case "right": {
+          const waiting = clockWaitingForInput(currentDesign);
+          window.dispatchEvent(new Event("tv-reveal-apps"));
+          return waiting ? firstFocusKey(currentMap) : moveFocus(currentMap, current, command);
+        }
         default: {
           const exhaustive: never = command;
           return exhaustive;
@@ -77,18 +84,22 @@ export function useRemoteLink(
         return;
       }
       try {
-        const response = await fetch("/api/kumanda", { cache: "no-store" });
+        const response = await fetch(endpoint, { cache: "no-store" });
         if (response.ok && designRef.current && mapRef.current) {
           const snapshot = readSnapshot(await response.json());
           if (snapshot) {
+            // A newly opened receiver must not replay old button presses.
+            if (seen === null) seen = snapshot.seq;
+            const after = seen;
             const pending = snapshot.recent
-              .filter((entry) => entry.seq > seen)
+              .filter((entry) => entry.seq > after)
               .sort((left, right) => left.seq - right.seq);
             if (pending.length > 0) {
               let cursor = activeRef.current;
               for (const entry of pending) {
-                seen = Math.max(seen, entry.seq);
+                seen = Math.max(seen ?? 0, entry.seq);
                 if (entry.command === "enter") {
+                  if (designRef.current && clockWaitingForInput(designRef.current)) continue;
                   if (cursor) {
                     confirmRef.current(cursor);
                   }
@@ -104,12 +115,12 @@ export function useRemoteLink(
                 setRef.current(cursor);
                 reveal(cursor);
               }
-            } else if (snapshot.seq > seen) {
+            } else if (snapshot.seq > (seen ?? 0)) {
               seen = snapshot.seq;
             }
           }
         }
-        await fetch("/api/kumanda", {
+        if (designRef.current && mapRef.current) await fetch(endpoint, {
           method: "POST",
           headers: { "content-type": "application/json" },
           cache: "no-store",

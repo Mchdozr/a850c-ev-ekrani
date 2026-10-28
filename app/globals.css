@@ -50,6 +50,9 @@
 
 :root,
 .dark {
+  --font-body: var(--font-inter);
+  --font-soft: var(--font-nunito-sans);
+  --font-display: var(--font-inter);
   --background: oklch(0.16 0.006 260);
   --foreground: oklch(0.97 0.004 260);
   --card: oklch(0.21 0.008 260);

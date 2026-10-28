@@ -32,7 +32,8 @@ private fun layoutMosaic(
     date: String,
     measurer: TextMeasurer,
 ): Scene {
-    val pad = cqw(width, 3.1f)
+    val pad = cqw(width, 5f)
+    val clockTop = height * 0.0593f
     val ops = mutableListOf<DrawOp>()
     val items = mutableListOf<FocusItem>()
     var cursor = pad
@@ -45,7 +46,7 @@ private fun layoutMosaic(
                 StyledRun(date, dateSize, Palette.alpha(0xFFFFFFFF.toInt(), 0.88f), FontRole.BODY, TextAlign.LEFT, 0f),
             ),
             pad,
-            pad,
+            clockTop,
             cqw(width, 0.2f),
             measurer,
         )
@@ -96,8 +97,9 @@ private fun layoutMosaic(
     }
     val rowHeight = ((board.height - gap * (rows - 1)) / rows).coerceAtLeast(1f)
     val radius = cqw(width, 1.35f)
+    val useFeaturedComposition = slots.count { it.featured } == 2 && rows == 2
     for (slot in slots) {
-        val spec = mosaicSpecBox(slot, width, height)
+        val spec = if (useFeaturedComposition) mosaicSpecBox(slot, width, height) else null
         val left = spec?.left ?: colLeft[slot.column - 1]
         val tileWidth = spec?.width ?: colWidth[slot.column - 1]
         val top = spec?.top ?: (board.top + (slot.row - 1) * (rowHeight + gap))
@@ -110,15 +112,13 @@ private fun layoutMosaic(
         val label = textOr(slot.app.name, "Adsız")
         val children = mutableListOf<DrawOp>(DrawOp.RoundRect(tile, fill, radius))
         if (design.labels != LabelMode.AD) {
-            val word = brandWord(appMark(slot.app))
-            val icon = if (word != null) tile.width * 0.86f else when {
-                slot.tall -> cqw(width, 8.6f)
-                slot.featured -> cqw(width, 6.4f)
-                else -> cqw(width, 4.1f)
-            }
-            val iconHeight = if (word != null) tile.height * 0.46f else icon
+            val kind = appMark(slot.app)
+            val word = brandWord(kind)
+            val isWordmark = kind == AppMark.DISNEY || kind == AppMark.BLUTV || kind == AppMark.TABII
+            val iconHeight = tile.height * if (design.labels == LabelMode.LOGO) 0.6f else 0.48f
+            val icon = if (isWordmark) tile.width * 0.80f else iconHeight
             val iconLeft = tile.left + (tile.width - icon) / 2f
-            val iconTop = tile.top + if (design.labels == LabelMode.LOGO || word != null) {
+            val iconTop = tile.top + if (design.labels == LabelMode.LOGO) {
                 (tile.height - iconHeight) / 2f
             } else {
                 tile.height * 0.18f
@@ -188,315 +188,45 @@ private fun layoutSalon(
     focusKey: String?,
     measurer: TextMeasurer,
 ): Scene {
-    val padX = cqw(width, 3.4f)
-    val padTop = cqw(width, 2.3f)
-    val padBottom = cqw(width, 2f)
-    val innerLeft = padX
-    val innerRight = width - padX
-    val innerTop = padTop
-    val innerBottom = height - padBottom
-    val innerW = innerRight - innerLeft
-    val sectionGap = cqw(width, 0.32f)
-    val columnGap = cqw(width, 2.4f)
-    val ring = cqw(width, 1.2f)
     val ops = mutableListOf<DrawOp>()
-    val items = mutableListOf<FocusItem>()
-
-    val timeSize = cqw(width, 5.8f)
-    val dateSize = cqw(width, 1.15f)
-    val clockWidth = if (design.showClock) {
-        max(
-            measureWidth(time, timeSize, FontRole.DISPLAY, 0f, measurer),
-            measureWidth(date, dateSize, FontRole.BODY, 0f, measurer),
-        )
-    } else {
-        0f
-    }
-    val columnWidth = if (design.showClock) {
-        (innerW - clockWidth - columnGap).coerceAtLeast(cqw(width, 24f))
-    } else {
-        innerW
-    }
-
-    val eyebrow = "A 850 C".uppercase(TURKISH)
-    val greeting = textOr(design.greeting, "İyi akşamlar")
-    val profile = textOr(design.profileName, "Ev")
-    val weather = textOr(design.weatherLine, "Hava satırı boş")
-    val greetingSize = cqw(width, 2.7f)
-    val greetingLines = wrapText(greeting, columnWidth, 2) {
-        measureWidth(it, greetingSize, FontRole.DISPLAY, 0f, measurer)
-    }.ifEmpty { listOf(greeting) }
-
-    var cursor = innerTop
-    val headerOps = mutableListOf<DrawOp>()
-    fun addBlock(runs: List<StyledRun>, gapAfter: Float) {
-        val (blockOps, bottom) = placeRuns(runs, innerLeft, cursor, 0f, measurer)
-        headerOps += blockOps
-        cursor = bottom + gapAfter
-    }
-    addBlock(
-        listOf(StyledRun(eyebrow, cqw(width, 0.95f), Palette.foreground(0.45f), FontRole.BODY, TextAlign.LEFT, 0.16f)),
-        sectionGap,
-    )
-    addBlock(
-        greetingLines.map {
-            StyledRun(it, greetingSize, Palette.foreground, FontRole.DISPLAY, TextAlign.LEFT, 0f)
-        },
-        sectionGap,
-    )
-    addBlock(
-        listOf(
-            StyledRun(
-                ellipsize(profile, columnWidth) {
-                    measureWidth(it, cqw(width, 1.22f), FontRole.BODY, 0f, measurer)
-                },
-                cqw(width, 1.22f),
-                Palette.foreground(0.6f),
-                FontRole.BODY,
-                TextAlign.LEFT,
-                0f,
-            ),
-        ),
-        sectionGap,
-    )
-    addBlock(
-        listOf(
-            StyledRun(
-                ellipsize(weather, columnWidth) {
-                    measureWidth(it, cqw(width, 1.12f), FontRole.BODY, 0f, measurer)
-                },
-                cqw(width, 1.12f),
-                Palette.foreground(0.45f),
-                FontRole.BODY,
-                TextAlign.LEFT,
-                0f,
-            ),
-        ),
-        0f,
-    )
-    var headerBottom = cursor
     if (design.showClock) {
-        val (clockOps, clockBottom) = placeRuns(
-            listOf(
-                StyledRun(time, timeSize, Palette.foreground, FontRole.DISPLAY, TextAlign.RIGHT, 0f),
-                StyledRun(date, dateSize, Palette.foreground(0.45f), FontRole.BODY, TextAlign.RIGHT, 0f),
-            ),
-            innerRight,
-            innerTop,
-            cqw(width, 0.35f),
-            measurer,
-        )
-        headerOps += clockOps
-        headerBottom = max(headerBottom, clockBottom)
+        ops += placeRuns(listOf(
+            StyledRun(time, cqw(width, 5.83f), Palette.foreground, FontRole.DISPLAY, TextAlign.LEFT, 0f),
+            StyledRun(date, cqw(width, 1.46f), 0xFFC5CED8.toInt(), FontRole.BODY, TextAlign.LEFT, 0f),
+        ), width * 0.05f, height * 0.0593f, cqw(width, 0.2f), measurer).first
     }
-    ops += headerOps
-
-    val dock = layoutAppStrip(design.apps, width, thin = false, vertical = false, measurer)
-    val outerGap = cqw(width, 0.9f)
-    val dockTop = innerBottom - dock.height
-    val middleTop = headerBottom + outerGap
-    val middleBottom = dockTop - outerGap
-    val middle = layoutSalonRows(design, width, innerW, focusKey, ring, measurer)
-    val viewportH = (middleBottom - middleTop).coerceAtLeast(0f)
-    val focusedRow = middle.items.firstOrNull { it.key == focusKey }
-    val yOffset = if (focusedRow != null && middle.height > viewportH) {
-        offsetToReveal(focusedRow.box.top, focusedRow.box.bottom, viewportH, ring)
-    } else {
-        0f
-    }
-    val shiftY = middleTop - yOffset
-    val middleClip = Box(innerLeft, middleTop, innerRight, middleBottom.coerceAtLeast(middleTop))
-    ops += DrawOp.Group(
-        middleClip,
-        middle.ops.map { shiftOp(it, innerLeft, shiftY) },
-    )
-    items += middle.items.map { it.translate(innerLeft, shiftY) }
-
-    val dockFocus = dock.items.firstOrNull { it.key == focusKey }
-    val dockOffset = if (dockFocus != null && dock.width > innerW) {
-        offsetToReveal(dockFocus.box.left, dockFocus.box.right, innerW, ring)
-    } else {
-        0f
-    }
-    val dockClip = Box(innerLeft, dockTop, innerRight, innerBottom).outset(cqw(width, 1.3f))
-    ops += DrawOp.Group(
-        dockClip,
-        dock.ops.map { shiftOp(it, innerLeft - dockOffset, dockTop) },
-    )
-    items += dock.items.map { it.translate(innerLeft - dockOffset, dockTop) }
-    return Scene(ops, items)
+    val apps = bottomAppsScene(design, width, height, focusKey, measurer)
+    return Scene(ops + apps.ops, apps.items)
 }
 
-private fun layoutSalonRows(
+private fun bottomAppsScene(
     design: HomeDesign,
-    screenW: Float,
-    innerW: Float,
+    width: Float,
+    height: Float,
     focusKey: String?,
-    ring: Float,
     measurer: TextMeasurer,
-): Stack {
-    if (design.rows.isEmpty()) {
-        val size = cqw(screenW, 1.45f)
-        val message = "İçerik sırası yok. Tasarımcıdan bir sıra ekleyin."
-        val (ops, bottom) = placeRuns(
-            listOf(
-                StyledRun(
-                    ellipsize(message, innerW) { measureWidth(it, size, FontRole.BODY, 0f, measurer) },
-                    size,
-                    Palette.foreground(0.7f),
-                    FontRole.BODY,
-                    TextAlign.LEFT,
-                    0f,
-                ),
-            ),
-            0f,
-            0f,
-            0f,
-            measurer,
-        )
-        return Stack(ops, emptyList(), innerW, bottom)
-    }
-    val ops = mutableListOf<DrawOp>()
-    val items = mutableListOf<FocusItem>()
-    var y = 0f
-    val rowGap = cqw(screenW, 0.85f)
-    design.rows.forEachIndexed { index, row ->
-        val block = layoutCardRow(row, screenW, innerW, focusKey, ring, measurer)
-        ops += block.ops.map { shiftOp(it, 0f, y) }
-        items += block.items.map { it.translate(0f, y) }
-        y += block.height
-        if (index != design.rows.lastIndex) {
-            y += rowGap
-        }
-    }
-    return Stack(ops, items, innerW, y)
-}
-
-private fun layoutCardRow(
-    row: ContentRow,
-    screenW: Float,
-    innerW: Float,
-    focusKey: String?,
-    ring: Float,
-    measurer: TextMeasurer,
-): Stack {
-    val titleSize = cqw(screenW, 1.15f)
-    val title = ellipsize(textOr(row.title, "Adsız sıra"), innerW) {
-        measureWidth(it, titleSize, FontRole.BODY, 0f, measurer)
-    }
-    val (titleOps, titleBottom) = placeRuns(
-        listOf(
-            StyledRun(title, titleSize, Palette.foreground(0.7f), FontRole.BODY, TextAlign.LEFT, 0f),
-        ),
-        0f,
-        0f,
-        0f,
-        measurer,
-    )
-    if (row.cards.isEmpty()) {
-        val noteSize = cqw(screenW, 1.2f)
-        val (noteOps, noteBottom) = placeRuns(
-            listOf(
-                StyledRun(
-                    "Bu sırada kart yok.",
-                    noteSize,
-                    Palette.foreground(0.45f),
-                    FontRole.BODY,
-                    TextAlign.LEFT,
-                    0f,
-                ),
-            ),
-            0f,
-            titleBottom + cqw(screenW, 0.55f),
-            0f,
-            measurer,
-        )
-        return Stack(titleOps + noteOps, emptyList(), innerW, noteBottom)
-    }
-    val gap = cqw(screenW, 0.9f)
-    val cardsTop = titleBottom + cqw(screenW, 0.55f)
-    var x = 0f
-    val cardOps = mutableListOf<DrawOp>()
-    val cardItems = mutableListOf<FocusItem>()
-    var cardHeight = 0f
-    for (card in row.cards) {
-        val laid = layoutPosterCard(row.id, card, screenW, x, measurer)
-        cardOps += laid.ops
-        cardItems += laid.item
-        cardHeight = max(cardHeight, laid.height)
-        x += laid.width + gap
-    }
-    val contentW = (x - gap).coerceAtLeast(0f)
-    val focused = cardItems.firstOrNull { it.key == focusKey }
-    val offset = if (focused != null) {
-        offsetToReveal(focused.box.left, focused.box.right, innerW, ring)
-    } else {
-        0f
-    }
-    val shiftedOps = cardOps.map { shiftOp(it, -offset, cardsTop) }
-    val shiftedItems = cardItems.map { it.translate(-offset, cardsTop) }
-    val clip = Box(-ring, cardsTop - ring, innerW + ring, cardsTop + cardHeight + ring)
-    return Stack(
-        ops = titleOps + DrawOp.Group(clip, shiftedOps),
-        items = shiftedItems,
-        width = contentW,
-        height = cardsTop + cardHeight,
-    )
-}
-
-private data class LaidCard(
-    val ops: List<DrawOp>,
-    val item: FocusItem,
-    val width: Float,
-    val height: Float,
-)
-
-private fun layoutPosterCard(
-    rowId: String,
-    card: ContentCard,
-    screenW: Float,
-    x: Float,
-    measurer: TextMeasurer,
-): LaidCard {
-    val cardW = cqw(screenW, 14.8f)
-    val posterH = cardW * 9f / 16f
-    val radius = cqw(screenW, 1.2f)
-    val titleSize = cardW * 0.09f
-    val metaSize = cardW * 0.072f
-    val textWidth = cardW * 0.88f
-    val title = ellipsize(textOr(card.title, "Adsız kart"), textWidth) {
-        measureWidth(it, titleSize, FontRole.BODY, 0f, measurer)
-    }
-    val meta = ellipsize(textOr(card.meta, "Bilgi yok"), textWidth) {
-        measureWidth(it, metaSize, FontRole.BODY, 0f, measurer)
-    }
-    val poster = Box(x, 0f, x + cardW, posterH)
-    val key = cardKey(rowId, card.id)
-    val ops = listOf(
-        DrawOp.Group(
-            clip = null,
-            children = listOf(
-                DrawOp.Poster(poster, radius, card.id, title, meta),
-            ),
-            liftKey = key,
-        ),
-    )
-    val height = posterH
-    return LaidCard(
-        ops = ops,
-        item = FocusItem(key, poster, radius),
-        width = cardW,
-        height = height,
-    )
+): Scene {
+    val strip = layoutAppStrip(design, width, thin = false, vertical = false, measurer)
+    val available = width * 0.9f
+    val focused = strip.items.firstOrNull { it.key == focusKey }
+    val offset = if (focused != null && strip.width > available) {
+        offsetToReveal(focused.box.left, focused.box.right, available, cqw(width, 0.4f))
+    } else 0f
+    val x = width * 0.05f + (available - strip.width).coerceAtLeast(0f) / 2f - offset
+    val y = height * 0.874f - strip.height
+    val clip = Box(width * 0.05f, y, width * 0.95f, height * 0.874f).outset(cqw(width, 1.2f))
+    return Scene(listOf(DrawOp.Group(clip, strip.ops.map { shiftOp(it, x, y) })),
+        strip.items.map { it.translate(x, y) })
 }
 
 private fun layoutAppStrip(
-    apps: List<DockApp>,
+    design: HomeDesign,
     screenW: Float,
     thin: Boolean,
     vertical: Boolean,
     measurer: TextMeasurer,
 ): Stack {
+    val apps = design.apps
     if (apps.isEmpty()) {
         val size = cqw(screenW, 1.3f)
         val (ops, bottom) = placeRuns(
@@ -518,26 +248,25 @@ private fun layoutAppStrip(
         val width = measureWidth("Uygulama şeridi boş.", size, FontRole.BODY, 0f, measurer)
         return Stack(ops, emptyList(), width, bottom)
     }
-    val gap = cqw(screenW, if (vertical) 0.85f else 1.45f)
+    val gap = cqw(screenW, if (vertical) 0.85f else 1.25f)
     val chips = apps.mapIndexed { index, app ->
-        layoutAppChip(app, screenW, thin, index < 2, measurer)
+        layoutAppChip(app, design, screenW, thin, index < 2, measurer)
     }
     val ops = mutableListOf<DrawOp>()
     val items = mutableListOf<FocusItem>()
     var cursor = 0f
     val cross = chips.maxOf { chip -> if (vertical) chip.width else chip.height }
-    chips.forEachIndexed { index, chip ->
-        val extra = if (index == 1 && apps.size > 2) gap * 1.25f else 0f
+    chips.forEach { chip ->
         if (vertical) {
             val dx = (cross - chip.width) / 2f
             ops += chip.ops.map { shiftOp(it, dx, cursor) }
             items += chip.item.translate(dx, cursor)
-            cursor += chip.height + gap + extra
+            cursor += chip.height + gap
         } else {
             val dy = cross - chip.height
             ops += chip.ops.map { shiftOp(it, cursor, dy) }
             items += chip.item.translate(cursor, dy)
-            cursor += chip.width + gap + extra
+            cursor += chip.width + gap
         }
     }
     val length = (cursor - gap).coerceAtLeast(0f)
@@ -557,69 +286,52 @@ private data class Chip(
 
 private fun layoutAppChip(
     app: DockApp,
+    design: HomeDesign,
     screenW: Float,
     thin: Boolean,
     lead: Boolean,
     measurer: TextMeasurer,
 ): Chip {
-    val icon = cqw(
-        screenW,
-        when {
-            thin && lead -> 4.7f
-            thin -> 3.15f
-            lead -> 6.7f
-            else -> 4.15f
-        },
-    )
-    val radius = icon * 0.3f
-    val letterSize = icon * 0.36f
-    val labelSize = cqw(screenW, if (lead && !thin) 1.18f else 1f)
-    val gap = cqw(screenW, 0.42f)
-    val labelMax = cqw(screenW, if (lead) 8.4f else 6.4f)
+    val width = cqw(screenW, if (thin) 7.8f else if (lead) 18.75f else 11.25f)
+    val height = cqw(screenW, if (thin) 7.2f else if (lead) 10.833f else 9.169f)
+    val box = Box(0f, 0f, width, height)
+    val radius = cqw(screenW, 1.46f)
+    val labelSize = cqw(screenW, if (thin) 0.95f else if (lead) 1.55f else 1.22f)
+    val pad = cqw(screenW, if (thin) 0.45f else 0.8f)
+    val gap = cqw(screenW, if (thin) 0.2f else 0.45f)
     val label = textOr(app.name, "Adsız")
-    val shown = ellipsize(label, labelMax) {
+    val shown = ellipsize(label, width - pad * 2f) {
         measureWidth(it, labelSize, FontRole.BODY, 0f, measurer)
     }
-    val letter = label.take(1).uppercase(TURKISH).ifEmpty { "·" }
-    val labelMetrics = measurer.measure(shown, labelSize, FontRole.BODY, 0f)
-    val blockW = max(icon, labelMetrics.width)
-    val iconLeft = (blockW - icon) / 2f
-    val iconBox = Box(iconLeft, 0f, iconLeft + icon, icon)
+    val metrics = measurer.measure(shown, labelSize, FontRole.BODY, 0f)
+    val kind = appMark(app)
+    val fill = tileFill(app, design.tiles, design.logoColor)
+    val ink = glyphInk(app, design.tiles, design.logoColor)
+    val children = mutableListOf<DrawOp>(DrawOp.RoundRect(box, fill, radius,
+        Palette.foreground(0.15f), cqw(screenW, 0.05f)))
+    if (design.labels != LabelMode.AD) {
+        val markHeight = height - pad * 2f - if (design.labels == LabelMode.LOGO_AD) metrics.height + gap else 0f
+        val markWidth = when (kind) {
+            AppMark.AYARLAR -> minOf(markHeight, width * 0.4f)
+            AppMark.YOUTUBE, AppMark.NETFLIX -> width * 0.65f
+            else -> width * 0.91f
+        }
+        val drawnHeight = if (kind == AppMark.AYARLAR) markWidth else markHeight
+        val markTop = pad + (markHeight - drawnHeight) / 2f
+        children += DrawOp.Mark(
+            Box((width - markWidth) / 2f, markTop, (width + markWidth) / 2f, markTop + drawnHeight),
+            radius, kind, label.take(1).uppercase(TURKISH).ifEmpty { "·" }, fill, ink,
+            markHeight * 0.42f, glyphOnly = true,
+        )
+    }
+    if (design.labels != LabelMode.LOGO) {
+        children += DrawOp.Text(shown, width / 2f,
+            if (design.labels == LabelMode.AD) (height - metrics.height) / 2f + metrics.ascent
+                else height - pad - metrics.descent,
+            labelSize, tileInk(fill), FontRole.BODY, TextAlign.CENTER, 0f)
+    }
     val key = appKey(app.id)
-    val ops = listOf(
-        DrawOp.Group(
-            clip = null,
-            children = listOf(
-                DrawOp.Mark(
-                    box = iconBox,
-                    radius = radius,
-                    kind = appMark(app),
-                    letter = letter,
-                    fill = app.colorId.swatch,
-                    ink = app.colorId.ink,
-                    letterSize = letterSize,
-                ),
-                DrawOp.Text(
-                    text = shown,
-                    x = blockW / 2f,
-                    baseline = icon + gap + labelMetrics.ascent,
-                    size = labelSize,
-                    color = if (lead) Palette.foreground(0.9f) else Palette.foreground(0.5f),
-                    role = FontRole.BODY,
-                    align = TextAlign.CENTER,
-                    trackingEm = 0f,
-                ),
-            ),
-            liftKey = key,
-        ),
-    )
-    val height = icon + gap + labelMetrics.height
-    return Chip(
-        ops = ops,
-        item = FocusItem(key, iconBox, radius),
-        width = blockW,
-        height = height,
-    )
+    return Chip(listOf(DrawOp.Group(null, children, key)), FocusItem(key, box, radius), width, height)
 }
 
 private fun layoutSinema(
@@ -672,7 +384,7 @@ private fun layoutSinema(
     val side = layoutSideList(cards.drop(1), sideBox, width, focusKey, measurer)
     ops += side.ops
     items += side.items
-    val dock = layoutAppStrip(design.apps, width, thin = true, vertical = true, measurer)
+    val dock = layoutAppStrip(design, width, thin = true, vertical = true, measurer)
     val dockPlaced = placeVerticalStrip(dock, dockBox, focusKey, cqw(width, 0.9f))
     ops += dockPlaced.ops
     items += dockPlaced.items
@@ -925,142 +637,14 @@ private fun layoutSaat(
     focusKey: String?,
     measurer: TextMeasurer,
 ): Scene {
-    val padX = cqw(width, 3f)
-    val padY = cqw(width, 3.2f)
-    val ops = mutableListOf<DrawOp>()
-    val profile = textOr(design.profileName, "Ev")
-    val eyebrow = "A 850 C · $profile".uppercase(TURKISH)
-    val eyebrowSize = cqw(width, 1.2f)
-    val eyebrowText = ellipsize(eyebrow, width - padX * 2) {
-        measureWidth(it, eyebrowSize, FontRole.BODY, 0.16f, measurer)
-    }
-    val (topOps, topBottom) = placeRuns(
-        listOf(
-            StyledRun(
-                eyebrowText,
-                eyebrowSize,
-                Palette.foreground(0.45f),
-                FontRole.BODY,
-                TextAlign.CENTER,
-                0.16f,
-            ),
-        ),
-        width / 2f,
-        padY,
-        0f,
-        measurer,
-    )
-    ops += topOps
-    val dock = layoutAppStrip(design.apps, width, thin = true, vertical = false, measurer)
-    val dockTop = height - padY - dock.height
-    val middleOps = mutableListOf<DrawOp>()
-    var middleH = 0f
-    val weather = textOr(design.weatherLine, "Hava satırı boş")
-    val blockGap = cqw(width, 1f)
-    if (design.showClock) {
-        val timeSize = cqw(width, 15f)
-        val dateSize = cqw(width, 1.15f)
-        val (clockOps, clockBottom) = placeRuns(
-            listOf(
-                StyledRun(time, timeSize, Palette.foreground, FontRole.DISPLAY, TextAlign.CENTER, 0f),
-                StyledRun(date, dateSize, Palette.foreground(0.45f), FontRole.BODY, TextAlign.CENTER, 0f),
-            ),
-            width / 2f,
-            0f,
-            cqw(width, 0.45f),
-            measurer,
-        )
-        middleOps += clockOps
-        middleH = clockBottom
-        val greetSize = cqw(width, 2.8f)
-        val greet = ellipsize(textOr(design.greeting, "İyi akşamlar"), width - padX * 2) {
-            measureWidth(it, greetSize, FontRole.DISPLAY, 0f, measurer)
-        }
-        val (greetOps, greetBottom) = placeRuns(
-            listOf(StyledRun(greet, greetSize, Palette.foreground, FontRole.DISPLAY, TextAlign.CENTER, 0f)),
-            width / 2f,
-            middleH + blockGap,
-            0f,
-            measurer,
-        )
-        middleOps += greetOps
-        middleH = greetBottom
-    } else {
-        val greetSize = cqw(width, 8f)
-        val greet = ellipsize(textOr(design.greeting, "İyi akşamlar"), width - padX * 2) {
-            measureWidth(it, greetSize, FontRole.DISPLAY, 0f, measurer)
-        }
-        val (greetOps, greetBottom) = placeRuns(
-            listOf(StyledRun(greet, greetSize, Palette.foreground, FontRole.DISPLAY, TextAlign.CENTER, 0f)),
-            width / 2f,
-            0f,
-            0f,
-            measurer,
-        )
-        middleOps += greetOps
-        middleH = greetBottom
-        val (hiddenOps, hiddenBottom) = placeRuns(
-            listOf(
-                StyledRun(
-                    "Saat gizli.",
-                    cqw(width, 1.5f),
-                    Palette.foreground(0.7f),
-                    FontRole.BODY,
-                    TextAlign.CENTER,
-                    0f,
-                ),
-            ),
-            width / 2f,
-            middleH + blockGap,
-            0f,
-            measurer,
-        )
-        middleOps += hiddenOps
-        middleH = hiddenBottom
-    }
-    val weatherSize = cqw(width, 1.5f)
-    val weatherText = ellipsize(weather, width - padX * 2) {
-        measureWidth(it, weatherSize, FontRole.BODY, 0f, measurer)
-    }
-    val (weatherOps, weatherBottom) = placeRuns(
-        listOf(
-            StyledRun(
-                weatherText,
-                weatherSize,
-                Palette.foreground(0.75f),
-                FontRole.BODY,
-                TextAlign.CENTER,
-                0f,
-            ),
-        ),
-        width / 2f,
-        middleH + blockGap,
-        0f,
-        measurer,
-    )
-    middleOps += weatherOps
-    middleH = weatherBottom
-    val freeTop = topBottom
-    val freeBottom = dockTop - cqw(width, 1.2f)
-    val middleTop = freeTop + ((freeBottom - freeTop - middleH).coerceAtLeast(0f) / 2f)
-    ops += middleOps.map { shiftOp(it, 0f, middleTop) }
-
-    val available = width - padX * 2
-    val dockFocus = dock.items.firstOrNull { it.key == focusKey }
-    val offset = if (dockFocus != null && dock.width > available) {
-        offsetToReveal(dockFocus.box.left, dockFocus.box.right, available, cqw(width, 0.4f))
-    } else {
-        0f
-    }
-    val originX = if (dock.width <= available && offset == 0f) {
-        padX + (available - dock.width) / 2f
-    } else {
-        padX - offset
-    }
-    val viewport = Box(padX, dockTop, width - padX, height - padY).outset(cqw(width, 1.2f))
-    ops += DrawOp.Group(viewport, dock.ops.map { shiftOp(it, originX, dockTop) })
-    val items = dock.items.map { it.translate(originX, dockTop) }
-    return Scene(ops, items)
+    val text = if (design.showClock) time else "Saat gizli."
+    val size = cqw(width, if (design.showClock) 8.33f else 4f)
+    val metrics = measurer.measure(text, size, FontRole.DISPLAY, 0f)
+    val clock = DrawOp.Text(text, width / 2f, (height - metrics.height) / 2f + metrics.ascent,
+        size, Palette.foreground, FontRole.DISPLAY, TextAlign.CENTER, 0f)
+    val apps = if (focusKey != null) bottomAppsScene(design, width, height, focusKey, measurer)
+        else Scene(emptyList(), emptyList())
+    return Scene(listOf(clock) + apps.ops, apps.items)
 }
 
 private fun brandWord(kind: AppMark): String? {

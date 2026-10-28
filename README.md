@@ -1,79 +1,106 @@
-# A 850 C ev ekranı
+# A 850 C · Ev ekranı
 
-Arçelik 8 serisi **A 850 C** Google TV (50 inç, 4K UHD QLED, Dolby Vision ve Atmos) için kendi giriş ekranınız. Karşılama, profil adı, hava satırı, İstanbul saati, duvar kâğıdı, uygulama şeridi ve içerik sıraları sizin metninizdir. Paket adı `dev.evekrani.a850c`, uygulama adı **Ev ekranı**dır. Arçelik adına imzalanmış bir sistem uygulaması değildir.
+Arçelik A 850 C için Next.js tasarımcı ve sideload edilen Android TV HOME uygulaması. Android paket adı `dev.evekrani.a850c`, uygulama adı **Ev ekranı**.
 
-Bu depo Google’ın başlatıcısını (`com.google.android.apps.tv.launcherx` veya `com.google.android.tvlauncher`) değiştirmez, imzasını bozmaz ve sistem bölümüne yazmaz. Cihaz prize takılırken görünen Arçelik veya Google logosu televizyonun kendi yazılımıdır. Tasarım, Android açılışı bittikten sonra, bu uygulamayı varsayılan Ana Sayfa olarak seçtiğinizde gelir.
+Sistem başlatıcıları (`com.google.android.apps.tv.launcherx`, `com.google.android.tvlauncher`), firmware, üreticinin açılış logosu, sistem bölümü ve imza kontrolü değiştirilmez. Bu, Android açıldıktan sonra varsayılan Ana Sayfa olarak seçilen bağımsız uygulamadır.
 
-## Televizyona kurma
+## Görünüm
 
-Hata ayıklama paketi: `android/evekrani-a850c-debug.apk`
+Varsayılan: İstanbul akşamı, sol üstte İstanbul saati/tarihi, YouTube solda ve Netflix sağda eşit yükseklikte büyük karolar; ikinci sırada Disney+, BluTV, tabii ve Ayarlar. Beyaz odak çerçevesi yön tuşlarıyla hareket eder.
 
-1. Televizyonda geliştirici seçeneklerini açın. Ayarlar > Sistem > Hakkında bölümünde Android TV işletim sistemi derlemesine art arda basın. Sonra USB hata ayıklamayı veya kablosuz hata ayıklamayı açın.
-2. Bilgisayardan kurun. USB bağlıysa:
+- **Mozaik:** iki büyük öncelikli karo ve altında diğer uygulamalar.
+- **Dock:** altta tek sıra; YouTube ve Netflix daha büyük. JSON içindeki eski `salon` kimliği uyumluluk için korunur.
+- **Sinema:** büyük içerik afişi, yan liste ve uygulama sütunu; bunlar örnek içeriklerdir, yayın servislerinden izleme geçmişi alınmaz.
+- **Saat:** 160 px saat; uygulamalar bir yön tuşuna veya telefonun yön komutuna kadar gizlidir.
+
+Kendin yap panelinde dört düzen, sekiz arka plan, Marka renkleri/Sade cam karolar, Logo ve ad/Yalnız logo/Yalnız ad, logo rengi, Modern/Yumuşak font, saat, lamba yoğunluğu ve uygulama seçimi bulunur. Fotoğraf yükleme ve lamba ana panelden erişilir. Değişiklikler hemen uygulanır. **Boğaz Camı, Amber Salon, Gece Mavisi, Kış Sessizliği** temaları uygulama listenizi, içeriklerinizi ve seçili düzeninizi korur.
+
+YouTube kırmızı zeminde beyaz oynat işareti, Netflix koyu zeminde beyaz vektör N kullanır; Disney+ yaylı tam adı, BluTV ve tabii tam kelime işaretleriyle çizilir. Resmî marka logo paketi indirilmez; düşük çözünürlüklü sabit PNG plakalarına bağımlılık yoktur. Android'de kurulu uygulamanın ikonu kullanılır; paket bulunamazsa aynı çizilmiş işaret gösterilir. Sade ve tek renk seçenekleri çizilmiş işareti kullanarak sabit plaka sorununu önler.
+
+Modern = **Inter**, Yumuşak = **Nunito Sans**; font dosyaları ve OFL lisansları web/Android paketinde bulunur. Tasarım 1920×1080 referanslıdır ve 4K'da orantılı çizilir.
+
+Sekiz arka plan da yerel JPEG sahnesidir: `istanbul-aksam`, `sonbahar-bahce`, `siyah` (obsidyen kıvrımlar), `bakir-lamba`, `gece-cam`, `somine`, `zeytin-gece`, `kis-aksami`. Son altısı artık siyaha yakın, birbirine benzeyen geçişler değildir. Web ve APK aynı JPEG dosyalarını, hafif okunaklılık gölgesini ve lamba ışığını kullanır; Sade karolar ve panel arka planı bulanık camdır.
+
+**Görsel kaynağı:** önceki iki JPG, logolar, fontlar ve APK `11dd216` commit'ine yüklenmemişti; bu klonda korunabilecek eski ikili dosyalar yoktu. Eksik duvarlar aynı dosya adlarıyla yeni üretilmiş fotoğraf tarzı sahnelerle tamamlandı; orijinal fotoğrafların kurtarıldığı iddia edilmez. Kaynaklar, lisanslar ve doğrulama özetleri `assets/SOURCES.md` ve `assets/asset-manifest.json` içindedir.
+
+## Web tasarımcıyı çalıştırma
+
+Node.js 20.9+ gerekir; bu ortamda Node.js 24 ile doğrulanır.
+
+```bash
+npm ci
+npm run dev -- --hostname 0.0.0.0 --port 3000
+```
+
+Tasarımcı `/`, tam ekran önizleme `/tv`, tarayıcı kumandası `/kumanda` yolundadır. Telefonla erişim için bilgisayarın yerel ağ adresini kullanın; telefonunuzun `localhost` adresi bilgisayarınız değildir. Sunucu ve telefon aynı ağda olmalıdır.
+
+Web tasarımı yalnızca bu tarayıcının `localStorage` alanında **`a850c-ev-ekrani-v3`** anahtarıyla tutulur. Telefonda aynı JSON otomatik oluşmaz; Android uygulaması da bu depoyu okumaz. **Dosya ve REA → Dosya** bölümünden JSON dışa aktarılır/geri yüklenir. Geçersiz JSON mevcut tasarımı değiştirmez.
+
+## Akşam kurulumu: tasarımcıdan fiziksel TV'ye
+
+1. Tasarımcıda görünümü hazırlayın ve **Dosya ve REA → Dosya → JSON indir** ile `a850c-ev-ekrani.json` alın.
+2. TV'de geliştirici seçeneklerini ve hata ayıklamayı açın; USB veya TV'nin gösterdiği kablosuz eşleştirme adresiyle ADB bağlantısını kurun.
+3. JSON'u aktarın ve APK'yı kurun:
 
 ```bash
 adb devices
-adb install -r android/evekrani-a850c-debug.apk
-```
-
-Kablosuz hata ayıklamada televizyonun gösterdiği eşleştirme kodu ve adres kullanılır:
-
-```bash
-adb pair <televizyon-adresi>:<eşleştirme-portu>
-adb connect <televizyon-adresi>:<bağlantı-portu>
-adb install -r android/evekrani-a850c-debug.apk
-```
-
-3. Kumandada Ana Sayfa’ya basın ve **Ev ekranı** uygulamasını varsayılan olarak seçin. Liste açılmazsa Ayarlar > Uygulamalar > Varsayılan uygulamalar > Ana sayfa yolunu kullanın. Google TV ana sayfası zaten varsayılansa, o uygulamanın varsayılan açılışını temizleyip Ana Sayfa’ya yeniden basın.
-4. Bundan sonra Ana Sayfa bu tasarımı açar. Üretici logosu açılışta yine televizyonun kendi logosudur.
-
-Ağ olmadan ekran, tasarımcıdaki `createDefaultDesign()` ile aynı mozaiktir: sonbahar bahçesi, sol üstte İstanbul saati ve büyük uygulama karoları. YouTube kırmızı karoda beyaz oynat üçgeni, Netflix koyu karoda beyaz N olarak çizilir. Sağdaki **Kendin yap** paneli tasarım, arka plan, karo, etiket, logo rengi, yazı tipi ve saati hemen değiştirir. Disney+, BluTV, tabii ve Ayarlar da kendi işaretlerini taşır. YouTube (`com.google.android.youtube.tv`, yoksa `com.google.android.youtube`) veya Netflix (`com.netflix.ninja`, yoksa `com.netflix.mediaclient`) kuruluysa kutuda o paketin kendi simgesi durur. Tamam veya Enter, kuruluysa leanback ya da açılış niyetiyle uygulamayı başlatır. Paket yoksa çizilmiş işaret kalır ve ekran kapanmaz. Diğer kutular seçilen adı gösterir.
-
-Tasarımcının indirdiği dosyayı kullanmak isteğe bağlıdır:
-
-```bash
 adb push a850c-ev-ekrani.json /sdcard/Download/a850c-ev-ekrani.json
+adb install -r android/evekrani-a850c-debug.apk
 adb shell pm grant dev.evekrani.a850c android.permission.READ_EXTERNAL_STORAGE
 ```
 
-Dosya yoksa veya televizyon okumayı engellerse yerleşik mozaik kalır. Dosya bozuksa ekran örneğe döner ve altta kısa bir uyarı gösterir. Ana Sayfa’ya tekrar basınca dosya yeniden okunur. İzin yeni verildiyse bir kez `adb shell am force-stop dev.evekrani.a850c` deyip Ana Sayfa’ya basın.
-
-## Tasarımcı
+İsterseniz bu aktarım ve kurulumu tek komutla yapın; ikinci argüman isteğe bağlı ADB cihaz seri numarasıdır:
 
 ```bash
-npm install
-npm run dev
+bash scripts/deploy-tv.sh ~/Downloads/a850c-ev-ekrani.json
+bash scripts/deploy-tv.sh ~/Downloads/a850c-ev-ekrani.json 192.168.1.50:5555
 ```
 
-Tarayıcıda [http://localhost:3000](http://localhost:3000) adresini açın. Tam ekran görünüm [http://localhost:3000/tv](http://localhost:3000/tv) yolundadır. Bu adres Ana Sayfa düğmesinin yerine geçmez.
+4. Kumandada Ana Sayfa'ya basıp **Ev ekranı** uygulamasını varsayılan seçin; seçim açılmazsa TV ayarlarının varsayılan ana sayfa bölümünü kullanın. Sistem başlatıcısını kaldırmayın veya devre dışı bırakmayın.
+5. Yeni JSON aktarınca Ana Sayfa'ya tekrar basın; dosya yeniden okunur. Gerekirse yalnızca bu uygulamayı yeniden başlatın: `adb shell am force-stop dev.evekrani.a850c`, ardından Ana Sayfa.
 
-Ağdaki televizyon tarayıcısından bakmak için:
+APK, `/sdcard/Download/a850c-ev-ekrani.json` dosyasını isteğe bağlı okur; dosya yoksa İstanbul varsayılanı açılır, bozuk dosyada uyarı ve varsayılan görünüm kullanılır. TV panelindeki değişiklikler uygulamanın özel alanında saklanır; dışarıdan farklı bir JSON aktarılması yeni tasarımı yükler. Özel fotoğraf JSON'a gömülüdür.
+
+`INSTALL_FAILED_UPDATE_INCOMPATIBLE`, önceki APK'nın farklı bir debug anahtarıyla imzalandığını gösterir; `-r` imza kontrolünü aşmaz. Aynı anahtarla yeniden derleyin veya verileri yedekledikten sonra eski uygulamayı kaldırıp yeniden kurmayı kendiniz seçin; betik otomatik kaldırma yapmaz. Bu depoda imza anahtarı paylaşılmaz.
+
+## QR ile telefon kumandası — gerçek APK
+
+1. TV ve telefonu aynı Wi-Fi/LAN'a bağlayın.
+2. Ev ekranında kumandanın **Menü** tuşuna basın veya **Ayarlar → Telefonla bağlan** seçin.
+3. TV'nin gösterdiği QR kodunu telefon kamerasıyla okutun; tarayıcı doğrudan TV'nin sunduğu kumandayı açar.
+
+Telefon kumandasında YouTube/Netflix kısayolları, yukarı/sol/Tamam/sağ/aşağı, Geri ve Ev ekranı bulunur. **Bilgisayar, Next.js, hesap veya internet gerekmez.** Bağlantı kalp atışıyla izlenir; durum satırı yalnızca yanıt varken Bağlı olur.
+
+Bu kumanda Ev ekranında gezinir ve kurulu uygulamaları başlatır; açılan Netflix/YouTube gibi başka uygulamaların içindeki tuşları yönetmez. Başka uygulama açıkken yön komutları açıklamayla reddedilir. Android'in arka plan sınırlamaları veya süreci kapatması durumunda fiziksel Ana Sayfa tuşuyla dönüp QR'ı yeniden okutun. Ses/güç ve sistem geneli kumanda yetkisi eklenmez.
+
+Yerel sunucu IPv4 Wi-Fi/Ethernet adresini ve rastgele portu kullanır; bağlantı URL'si her uygulama sürecinde yeni, 192 bit rastgele anahtar taşır. Sunucu uygulama yok edilirken kapanır; sekiz saniye yanıt vermeyen telefon bağlantısı düşer. Misafir ağı/istemci yalıtımı cihazların birbirine erişmesini engelleyebilir. URL'yi erişim izni vermek istediğiniz kişilerle paylaşın.
+
+## Tarayıcı QR kumandası — ayrı önizleme
+
+Tasarımcıdaki veya `/tv` sayfasındaki **Telefonla bağlan**, `/tv` önizlemesi için QR üretir. Sunucu adresi telefonun erişebildiği adres olmalıdır; loopback adresinden QR üretilmez. Ayrı ekranlar rastgele oturumlarla ayrılır. Kumanda kısayolları önizleme odağını seçer; tarayıcı fiziksel TV'deki paketi açmaz. Durum Bağlı olduğunda o oturumun `/tv` sayfası sunucuya yanıt veriyordur.
+
+Eski isteğe bağlı APK→Next köprüsü korunur: derlerken `EV_REMOTE_URL=http://<bilgisayar>:3000` veya başlatırken `ev_remote_url` ekstra alanı verilirse APK `/api/kumanda` yolunu yoklar; adres yoksa yoklama başlamaz. Eski köprünün telefon adresi `/kumanda?legacy=1` olur. Native QR yolu bu köprüye ihtiyaç duymaz.
+
+## Android derleme ve test
+
+JDK 17+, Android SDK platform 35/build-tools 35.0.0 gerekir. Gradle 8.11.1 wrapper JAR ve dağıtım SHA-256 doğrulaması depodadır. SDK için `ANDROID_HOME`, gerekirse `android/local.properties` içindeki `sdk.dir` kullanılır; local.properties commit edilmez. Bu bulut ortamının doğrulanmış araç kurulumu için `assets/TOOLCHAIN.md` ve `scripts/setup-android-toolchain.py` kullanılabilir.
 
 ```bash
-npx next dev --hostname 0.0.0.0 --port 43123
-```
-
-Televizyona `http://<bilgisayarın-adresi>:43123/tv` yazın. Telefon kumandası aynı sunucuda `http://<bilgisayarın-adresi>:43123/kumanda` adresindedir. Bu makinede geliştirme adresi `http://127.0.0.1:43123/kumanda` olur.
-
-Ok tuşları ve telefon kumandası aynı odağı gezdirir. Yukarı, aşağı, sol, sağ ve Tamam `/tv` sayfasındaki ışıltıyı oynatır. YouTube ve Netflix kısayolları odağı o kutuya alır. Tamam, odaklanan kartı veya uygulamayı bir onayla gösterir. Onay önizlemedir; tarayıcı televizyondaki paketi açmaz. Tam ekranda Esc sizi tasarımcıya geri götürür.
-
-Kumanda ile televizyon sayfası `localStorage` paylaşmaz. Son komut ve güncel odak bu Next sürecinin belleğindedir; sunucu yeniden başlayınca sıfırlanır. Telefon durumu “Bağlı” derken `/tv` kısa aralıklarla yoklamış demektir. Komut sunucuya gitmezse kumanda tek satırda hatayı söyler.
-
-Bu bilgisayar Arçelik televizyonuna uzaktan basamaz. Kurulan APK, televizyon kumandasının oklarını kullanır. `EV_REMOTE_URL` derleme sırasında (`http://192.168.1.20:43123` gibi) ya da açılış ekstra alanı `ev_remote_url` ile verilirse uygulama aynı `/api/kumanda` yolunu yoklar. Adres yoksa yoklama başlamaz.
-
-Tasarım bu tarayıcının `localStorage` alanına, `a850c-ev-ekrani-v3` anahtarıyla yazılır. Dosya sekmesinden JSON olarak dışa aktarabilir, geçerli bir dosyayı geri yükleyebilirsiniz. Bozuk JSON ekranı değiştirmez ve hatayı söyler.
-
-## Android projesi
-
-Kaynak `android/` altındadır. Kotlin, minSdk 24, hedef SDK 29’dur. Hedef, `/sdcard/Download/a850c-ev-ekrani.json` yolunun sideload bir ana ekranda okunabilmesi için legacy depolamada tutulur. Derlemek için JDK 17+ ve Android SDK (compileSdk 35) gerekir:
-
-```bash
+npm test
+npx tsc --noEmit
+npm run lint
+npm run build
+npx playwright install chromium
+npm run test:e2e
+python3 scripts/prepare-assets.py --check
 cd android
 ./gradlew :core:test :app:assembleDebug
+bash scripts/test-phone-remote.sh
+cp app/build/outputs/apk/debug/app-debug.apk evekrani-a850c-debug.apk
 ```
 
-Çıktı `android/app/build/outputs/apk/debug/app-debug.apk` olur. Depodaki kopya `android/evekrani-a850c-debug.apk` dosyasıdır.
+Çıktı `android/evekrani-a850c-debug.apk` dosyasıdır. minSdk 24, compileSdk 35, targetSdk 29; eski Downloads okuma akışı için legacy depolama korunur. `android/local.properties`, `public/a850c-ev-ekrani.zip` ve `public/CODEX-GOREV.txt` Git dışında tutulur. Gerçek TV kurulumu ve üreticiye özgü varsayılan HOME seçimi ayrıca cihaz üzerinde doğrulanmalıdır.
 
 ## REA
 
-REA sekmesi, verdiğiniz bir APK’yı `rea inspect-android-package` ile okur. Paket çalıştırılmaz. Komut yolu `REA_BIN` ile değişir; varsayılan `~/.local/bin/rea` olur. Sınıf gövdesi için ayrıca sizin sağladığınız JADX JAR gerekir. Bu kurulum JADX veya ADB indirmez. Televizyon bu bilgisayara bağlı değilse ekranı buradan çekilmez.
+**Dosya ve REA → REA**, kullanıcı tarafından sağlanan APK'yı `rea inspect-android-package` ile inceler; APK çalıştırılmaz. `app/api/rea/inspect`, `lib/rea.ts`, `components/rea-panel.tsx` korunur. Komut yolu `REA_BIN` ile değiştirilebilir; varsayılan `~/.local/bin/rea`. Sınıf gövdeleri için kullanıcı tarafından sağlanan JADX JAR gerekir. REA/JADX temel tasarımcı, native launcher veya QR kumandası için zorunlu değildir.

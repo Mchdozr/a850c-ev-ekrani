@@ -11,6 +11,7 @@ import {
   type Direction,
 } from "@/lib/focus";
 import type { HomeDesign } from "@/lib/design";
+import { clockWaitingForInput } from "@/lib/tv-visibility";
 
 function isTypingTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) {
@@ -84,7 +85,9 @@ export function useTvRemote(
       const direction = directionFromKey(event.key);
       if (direction && map) {
         event.preventDefault();
-        const next = moveFocus(map, activeKey, direction);
+        const waiting = clockWaitingForInput(design!);
+        window.dispatchEvent(new Event("tv-reveal-apps"));
+        const next = waiting ? firstFocusKey(map) : moveFocus(map, activeKey, direction);
         if (!next) {
           return;
         }
@@ -99,6 +102,7 @@ export function useTvRemote(
         return;
       }
       if (event.key === "Enter" && activeKey) {
+        if (clockWaitingForInput(design!)) return;
         const element = target instanceof HTMLElement ? target : null;
         const editorControl = element?.closest("button, a");
         const onScreen = element?.closest("[data-tv-item]");

@@ -18,7 +18,7 @@ export const LIMITS = {
 export const LAYOUT_IDS = ["mozaik", "salon", "sinema", "saat"] as const;
 export type LayoutId = (typeof LAYOUT_IDS)[number];
 
-export const PANEL_LAYOUT_IDS = ["mozaik", "salon", "saat"] as const;
+export const PANEL_LAYOUT_IDS = LAYOUT_IDS;
 
 export const TILE_IDS = ["marka", "sade"] as const;
 export type TileId = (typeof TILE_IDS)[number];
@@ -154,7 +154,7 @@ export function createDefaultDesign(): HomeDesign {
     profileName: "Ev",
     weatherLine: "İstanbul · serin bir akşam",
     showClock: true,
-    lamp: 10,
+    lamp: 35,
     wallpaper: { type: "preset", presetId: "istanbul-aksam" },
     tiles: "marka",
     labels: "logo-ad",
@@ -226,28 +226,7 @@ export function layoutHint(layout: LayoutId): string {
 }
 
 export function wallpaperBackground(id: WallpaperPresetId): string {
-  switch (id) {
-    case "istanbul-aksam":
-      return 'center / cover no-repeat url("/wallpapers/istanbul-aksam.jpg")';
-    case "sonbahar-bahce":
-      return 'center / cover no-repeat url("/wallpapers/sonbahar-bahce.jpg")';
-    case "siyah":
-      return "radial-gradient(90% 55% at 80% -10%, oklch(0.28 0.02 260 / 0.45), transparent 55%), linear-gradient(180deg, oklch(0.17 0.01 260), oklch(0.09 0.006 260))";
-    case "bakir-lamba":
-      return "radial-gradient(90% 70% at 86% 110%, oklch(0.58 0.14 55) 0%, transparent 58%), radial-gradient(70% 50% at 8% 0%, oklch(0.34 0.05 48) 0%, transparent 52%), linear-gradient(165deg, oklch(0.18 0.02 42), oklch(0.1 0.015 32))";
-    case "gece-cam":
-      return "radial-gradient(80% 45% at 50% 0%, oklch(0.3 0.03 55 / 0.7), transparent 60%), linear-gradient(180deg, oklch(0.13 0.012 40), oklch(0.16 0.03 50) 78%, oklch(0.24 0.05 58))";
-    case "somine":
-      return "radial-gradient(80% 60% at 50% 120%, oklch(0.52 0.16 42) 0%, transparent 62%), linear-gradient(180deg, oklch(0.11 0.02 30), oklch(0.18 0.04 36))";
-    case "zeytin-gece":
-      return "radial-gradient(70% 55% at 0% 100%, oklch(0.4 0.06 112) 0%, transparent 58%), linear-gradient(205deg, oklch(0.15 0.02 75), oklch(0.11 0.025 55))";
-    case "kis-aksami":
-      return "radial-gradient(45% 40% at 78% 18%, oklch(0.55 0.08 72 / 0.55), transparent 70%), linear-gradient(150deg, oklch(0.16 0.02 250), oklch(0.12 0.03 42))";
-    default: {
-      const exhaustive: never = id;
-      return exhaustive;
-    }
-  }
+  return `center / cover no-repeat url("/wallpapers/${id}.jpg")`;
 }
 
 export function wallpaperCss(wallpaper: Wallpaper): string {
@@ -276,7 +255,15 @@ export function isAppColorId(value: string): value is AppColorId {
 }
 
 export function newId(): string {
-  return crypto.randomUUID();
+  if (typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  // randomUUID requires HTTPS; getRandomValues also works on a local HTTP TV page.
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 export function moveListItem<T>(

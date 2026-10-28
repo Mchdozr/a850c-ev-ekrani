@@ -91,10 +91,10 @@ internal class WallpaperPainter {
             height,
             width * 0.72f,
             height * -0.08f,
-            width * 0.75f,
-            height * 0.48f,
-            ok(0.95, 0.01, 260.0, alpha),
-            0.68f,
+            width * 0.78f,
+            height * 0.64f,
+            ((alpha.coerceIn(0.0, 1.0) * 255).toInt() shl 24) or 0x00FFE0B5,
+            0.72f,
         )
     }
 
@@ -106,11 +106,12 @@ internal class WallpaperPainter {
             height,
             180f,
             intArrayOf(
-                ok(0.02, 0.005, 260.0, 0.25 * scale),
-                ok(0.02, 0.005, 260.0, 0.0),
-                ok(0.02, 0.005, 260.0, 0.4 * scale),
+                ((0.24 * scale * 255).toInt() shl 24) or 0x00050A12,
+                0x00050A12,
+                ((0.12 * scale * 255).toInt() shl 24) or 0x00050A12,
+                ((0.35 * scale * 255).toInt() shl 24) or 0x00050A12,
             ),
-            floatArrayOf(0f, 0.32f, 1f),
+            floatArrayOf(0f, 0.34f, 0.67f, 1f),
         )
     }
 

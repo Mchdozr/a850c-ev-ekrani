@@ -20,5 +20,5 @@ export function formatIstanbulTime(date: Date): string {
 }
 
 export function formatIstanbulDate(date: Date): string {
-  return dateFormatter.format(date);
+  return `${dateFormatter.format(date)} · İstanbul`;
 }

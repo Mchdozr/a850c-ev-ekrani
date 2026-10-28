@@ -170,7 +170,7 @@ fun createDefaultDesign(): HomeDesign {
         profileName = "Ev",
         weatherLine = "İstanbul · serin bir akşam",
         showClock = true,
-        lamp = 10,
+        lamp = 35,
         wallpaper = Wallpaper.Preset(WallpaperPresetId.ISTANBUL_AKSAM),
         tiles = TileStyle.MARKA,
         labels = LabelMode.LOGO_AD,

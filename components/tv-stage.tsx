@@ -8,6 +8,7 @@ import { TvScreen } from "@/components/tv-screen";
 import { useHomeDesign } from "@/components/use-home-design";
 import { useTvRemote } from "@/components/use-tv-remote";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PhonePairing } from "@/components/phone-pairing";
 
 export function TvStage() {
   const router = useRouter();
@@ -30,7 +31,7 @@ export function TvStage() {
   }
 
   return (
-    <div className="grid min-h-dvh place-items-center bg-background">
+    <div className="relative grid min-h-dvh place-items-center bg-background">
       <div
         className="relative overflow-hidden"
         style={{
@@ -47,6 +48,9 @@ export function TvStage() {
             setPickKey(key);
           }}
         />
+      </div>
+      <div data-appearance-panel className="absolute right-6 bottom-5 z-10 opacity-65 transition hover:opacity-100 focus-within:opacity-100">
+        <PhonePairing />
       </div>
       <PickDialog
         design={design}

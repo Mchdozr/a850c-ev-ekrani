@@ -1,0 +1,2 @@
+# Preserve the exact upstream OFL license bytes and their published checksums.
+**/fonts/*-OFL.txt -whitespace

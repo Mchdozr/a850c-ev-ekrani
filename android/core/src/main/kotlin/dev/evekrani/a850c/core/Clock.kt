@@ -46,7 +46,7 @@ fun formatIstanbulDate(epochMillis: Long): String {
     val day = calendar.get(Calendar.DAY_OF_MONTH)
     val month = MONTHS[calendar.get(Calendar.MONTH)]
     val weekday = WEEKDAYS[calendar.get(Calendar.DAY_OF_WEEK)]
-    return "$day $month $weekday"
+    return "$day $month $weekday · İstanbul"
 }
 
 private fun istanbulCalendar(epochMillis: Long): Calendar {

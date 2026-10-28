@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { AppMark } from "@/components/app-marks";
+import { browserRemoteSession, validSession } from "@/lib/pairing";
+import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import {
-  commandLabel,
   isRemoteCommand,
   readSnapshot,
   type RemoteCommand,
@@ -24,6 +25,14 @@ const INITIAL: LiveStatus = {
   message: null,
 };
 
+function endpoint(): string {
+  const query = new URLSearchParams(window.location.search);
+  if (query.get("legacy") === "1") return "/api/kumanda";
+  const session = query.get("session") ?? browserRemoteSession();
+  if (!validSession(session)) throw new Error("Geçersiz eşleştirme bağlantısı.");
+  return `/api/kumanda?session=${session}`;
+}
+
 function statusLine(status: LiveStatus): string {
   if (status.kind === "error" && status.message) {
     return status.message;
@@ -34,7 +43,7 @@ function statusLine(status: LiveStatus): string {
   if (status.connected) {
     return "Bağlı";
   }
-  return status.command ? commandLabel(status.command) : "Televizyon bağlı değil";
+  return "Tarayıcı ekranı bağlı değil";
 }
 
 export function KumandaRemote() {
@@ -42,7 +51,7 @@ export function KumandaRemote() {
 
   const refresh = useCallback(async () => {
     try {
-      const response = await fetch("/api/kumanda", { cache: "no-store" });
+      const response = await fetch(endpoint(), { cache: "no-store" });
       if (!response.ok) {
         setStatus((current) =>
           current.kind === "error"
@@ -110,7 +119,7 @@ export function KumandaRemote() {
 
   const send = useCallback(async (command: RemoteCommand) => {
     try {
-      const response = await fetch("/api/kumanda", {
+      const response = await fetch(endpoint(), {
         method: "POST",
         headers: { "content-type": "application/json" },
         cache: "no-store",
@@ -156,11 +165,12 @@ export function KumandaRemote() {
   const line = statusLine(status);
 
   return (
-    <div className="grid min-h-dvh place-items-center bg-[#0B0F14] px-4 py-8 text-white">
-      <div className="flex aspect-[9/16] w-full max-w-[26rem] flex-col gap-[4.4cqw] pb-[max(0.5rem,env(safe-area-inset-bottom))] [container-type:size]">
+    <div className="grid min-h-dvh place-items-center bg-[radial-gradient(ellipse_at_20%_0%,#29405a_0%,#111b28_38%,#090e16_80%)] px-6 py-8 text-white">
+      <div className="flex w-full max-w-[26rem] flex-col gap-8 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         <header className="flex flex-col gap-[1cqw]">
-          <h1 className="font-sans text-[5.9cqw] leading-none font-semibold tracking-tight">
-            TV Kumandası
+          <p className="mb-3 text-xs font-medium tracking-[0.18em] text-white/40 uppercase">Tarayıcı önizlemesi</p>
+          <h1 className="font-sans text-4xl leading-none font-semibold tracking-tight">
+            Kumandan hazır.
           </h1>
           <p
             data-kumanda-status
@@ -168,18 +178,18 @@ export function KumandaRemote() {
             role="status"
             className={
               status.kind === "error"
-                ? "flex min-h-[2rem] items-center gap-2 text-[3.7cqw] text-[#ffb4ab]"
-                : "flex min-h-[2rem] items-center gap-2 text-[3.7cqw] font-semibold text-white"
+                ? "mt-2 flex min-h-8 items-center gap-2 text-sm text-[#ffb4ab]"
+                : "mt-2 flex min-h-8 items-center gap-2 text-sm text-white/70"
             }
           >
             {status.kind === "error" ? null : (
-              <span className="size-[0.7rem] rounded-full bg-[#35D07F]" aria-hidden="true" />
+              <span className={`size-2 rounded-full ${status.connected ? "bg-[#35D07F] shadow-[0_0_12px_#35D07F66]" : "bg-white/30"}`} aria-hidden="true" />
             )}
             {line}
           </p>
         </header>
 
-        <div className="grid grid-cols-2 gap-[4.4cqw]">
+        <div className="grid grid-cols-2 gap-4">
           <ShortcutButton
             label="YouTube"
             mark="youtube"
@@ -192,7 +202,7 @@ export function KumandaRemote() {
           />
         </div>
 
-        <div className="mx-auto grid w-full max-w-[20rem] grid-cols-3 grid-rows-3 gap-[3cqw]">
+        <div className="mx-auto grid w-full max-w-[21rem] grid-cols-3 grid-rows-3 gap-3">
           <PadButton
             label="Yukarı"
             className="col-start-2 row-start-1"
@@ -219,6 +229,7 @@ export function KumandaRemote() {
             onPress={() => void send("down")}
           />
         </div>
+        <p className="mx-auto max-w-xs text-center text-xs leading-relaxed text-white/40">Bu kumanda eşleştirilen /tv önizlemesini yönetir. TV uygulamasını yönetmek için TV’deki Telefonla bağlan QR kodunu okutun.</p>
       </div>
     </div>
   );
@@ -237,7 +248,7 @@ function ShortcutButton({
     <button
       type="button"
       onClick={onPress}
-      className="flex h-[19.3cqh] items-center justify-center gap-3 rounded-[40px] bg-[#202A36] text-[3.7cqw] font-semibold active:bg-white/[0.18] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
+      className="flex min-h-28 flex-col items-center justify-center gap-3 rounded-[28px] border border-white/15 bg-white/[0.07] text-sm font-semibold shadow-lg backdrop-blur-xl transition active:scale-95 active:bg-white/[0.18] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80"
     >
       <span className="size-10 overflow-hidden rounded-[30%]">
         <AppMark kind={mark} letter={label.slice(0, 1)} swatch="#111" ink="#fff" />
@@ -260,9 +271,10 @@ function PadButton({
     <button
       type="button"
       onClick={onPress}
-      className={`flex h-[20cqw] items-center justify-center rounded-[48px] bg-[#202A36] text-[4.4cqw] font-semibold active:bg-white/[0.2] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80 ${className}`}
+      aria-label={label}
+      className={`flex aspect-square min-h-16 items-center justify-center rounded-[28px] border border-white/15 bg-white/[0.07] text-base font-semibold backdrop-blur-xl transition active:scale-95 active:bg-white/[0.2] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80 ${className}`}
     >
-      {label}
+      {label === "Yukarı" ? <ChevronUp size={28} /> : label === "Aşağı" ? <ChevronDown size={28} /> : label === "Sol" ? <ChevronLeft size={28} /> : label === "Sağ" ? <ChevronRight size={28} /> : label}
     </button>
   );
 }

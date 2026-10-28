@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#121419">
+<title>Ev kumandası</title>
+<style>
+:root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#101216;color:#f8f7f3}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 20% 0%,#35403455,transparent 65%),radial-gradient(ellipse at 100% 35%,#50516a38,transparent 60%),#101216;-webkit-tap-highlight-color:transparent}main{max-width:440px;padding:28px 24px calc(24px + env(safe-area-inset-bottom));margin:auto}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:30px}.eyebrow{font-size:10px;letter-spacing:.24em;color:#a8b5a0;text-transform:uppercase}h1{font-size:27px;font-weight:500;letter-spacing:-.04em;margin:6px 0 0}.home-name{font-size:12px;color:#9a9ca1;margin-top:6px}.connection{font-size:11px;color:#c1c2c5;display:flex;align-items:center;gap:7px}.dot{width:6px;height:6px;border-radius:50%;background:#8d8f93}.online .dot{background:#b7d39c;box-shadow:0 0 12px #b7d39c77}.glass{background:linear-gradient(135deg,#ffffff0d,#ffffff04);border:1px solid #ffffff14;box-shadow:0 12px 40px #00000020;border-radius:24px}.scope{font-size:12px;line-height:1.65;color:#c3c5c8;min-height:63px;padding:16px 18px;margin-bottom:22px}.scope strong{color:#f5f5f2;font-weight:500}.pad{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,84px);gap:8px;padding:16px;margin-bottom:16px}button{font:inherit;border:0;color:#f5f5f2;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;transition:background .12s,transform .12s;outline-offset:4px}button:focus-visible{outline:2px solid #bacda5}button:disabled{opacity:.32;cursor:default}.direction{border-radius:18px;background:#ffffff08;display:grid;place-items:center}.direction svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.direction:active,.direction.pressed,.action:active,.shortcut:active{background:#ffffff20;transform:scale(.96)}.up{grid-area:1/2}.left{grid-area:2/1}.ok{grid-area:2/2;border-radius:50%;font-size:15px;font-weight:550;background:#dfebce;color:#22291e;box-shadow:0 4px 24px #c6d4af18}.right{grid-area:2/3}.down{grid-area:3/2}.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:26px}.action{padding:18px 10px;border-radius:17px;background:#ffffff08;display:flex;align-items:center;justify-content:center;gap:10px;font-size:13px;border:1px solid #ffffff0b}.action svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}.section-label{font-size:10px;letter-spacing:.16em;color:#92979c;margin:0 2px 12px;text-transform:uppercase}.shortcuts{display:grid;grid-template-columns:1fr 1fr;gap:10px}.shortcut{border-radius:19px;background:#ffffff07;border:1px solid #ffffff12;min-height:84px;display:flex;justify-content:center;align-items:center;gap:11px;font-size:13px}.shortcut svg{width:35px;height:30px}.feedback{font-size:12px;line-height:1.6;color:#bdc9b2;min-height:34px;margin:17px 3px 0}.note{color:#7f858a;font-size:11px;line-height:1.7;margin:14px 3px 0}.note strong{font-weight:400;color:#b6b9bd}footer{font-size:10px;color:#626a70;letter-spacing:.07em;text-align:center;margin:25px 0 0}@media(max-height:760px){main{padding-top:20px}header{margin-bottom:20px}.scope{margin-bottom:15px}.pad{grid-template-rows:repeat(3,68px)}.actions{margin-bottom:20px}}
+</style>
+</head>
+<body>
+<main>
+<header><div><div class="eyebrow">Aynı ev, tek ekran</div><h1>Ev kumandası</h1><div class="home-name" id="tv">Televizyon</div></div><div class="connection" id="connection" role="status"><span class="dot"></span><span id="connection-text">Bağlanıyor</span></div></header>
+<div class="scope glass" id="scope" aria-live="polite">Ev ekranına bağlanılıyor…</div>
+<div class="pad glass" aria-label="Yön tuşları">
+<button class="direction up" data-cmd="up" data-repeat aria-label="Yukarı"><svg viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg></button>
+<button class="direction left" data-cmd="left" data-repeat aria-label="Sol"><svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></button>
+<button class="direction ok" data-cmd="enter" aria-label="Tamam">Tamam</button>
+<button class="direction right" data-cmd="right" data-repeat aria-label="Sağ"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
+<button class="direction down" data-cmd="down" data-repeat aria-label="Aşağı"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+</div>
+<div class="actions">
+<button class="action" data-cmd="back"><svg viewBox="0 0 24 24"><path d="m10 5-7 7 7 7M3 12h12a6 6 0 0 1 6 6"/></svg>Geri</button>
+<button class="action" data-cmd="home"><svg viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10H3V10Zm6 10v-7h6v7"/></svg>Ev ekranı</button>
+</div>
+<p class="section-label">Uygulamayı aç</p>
+<div class="shortcuts">
+<button class="shortcut" data-cmd="youtube" aria-label="YouTube'u aç"><svg viewBox="0 0 44 32" aria-hidden="true"><path fill="#f22b37" d="M42 6c-.5-2-2-3.5-4-4C34.5 1 22 1 22 1S9.5 1 6 2C4 2.5 2.5 4 2 6 1 9.5 1 16 1 16s0 6.5 1 10c.5 2 2 3.5 4 4 3.5 1 16 1 16 1s12.5 0 16-1c2-.5 3.5-2 4-4 1-3.5 1-10 1-10s0-6.5-1-10Z"/><path fill="white" d="m18 9 12 7-12 7Z"/></svg>YouTube</button>
+<button class="shortcut" data-cmd="netflix" aria-label="Netflix'i aç"><svg viewBox="0 0 30 40" aria-hidden="true"><path fill="white" d="M4 2h7v36l-7 1V2Zm15 0h7v37l-7-1V2Z"/><path fill="#f3f3f3" d="M4 2h7l15 37-7-1L4 2Z"/></svg>Netflix</button>
+</div>
+<p class="feedback" id="feedback" role="status" aria-live="polite"></p>
+<p class="note"><strong>Yön tuşları ve Geri, Ev ekranını yönetir.</strong> YouTube ve Netflix açıldıktan sonra uygulamanın kendi kumandasını veya TV kumandanı kullan. Bu sayfa diğer uygulamalara tuş göndermez.</p>
+<footer>EV EKRANI · YEREL BAĞLANTI</footer>
+</main>
+<script>
+(function(){
+'use strict';
+const base=location.pathname.endsWith('/')?location.pathname:location.pathname+'/';
+const connection=document.getElementById('connection');
+const label=document.getElementById('connection-text');
+const scope=document.getElementById('scope');
+const feedback=document.getElementById('feedback');
+const buttons=Array.from(document.querySelectorAll('[data-cmd]'));
+let online=false,homeActive=false,busy=false,polling=false;
+const focusNames={'app-netflix':'Netflix','app-youtube':'YouTube','app-disney':'Disney+','app-blutv':'BluTV','app-tabii':'tabii','app-ayarlar':'Ayarlar'};
+function enable(){buttons.forEach(b=>{b.disabled=!online||(!homeActive&&!['home','youtube','netflix'].includes(b.dataset.cmd));});}
+function offline(){online=false;connection.classList.remove('online');label.textContent='Bağlantı yok';scope.textContent='Telefon ve TV aynı Wi-Fi ağında olmalı. TV açıkken QR kodu yeniden okutabilirsin.';enable();}
+async function call(path,options){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),3000);try{return await fetch(base+path,Object.assign({cache:'no-store',signal:controller.signal},options||{}));}finally{clearTimeout(timer);}}
+async function poll(){if(polling)return;polling=true;try{const response=await call('status');if(!response.ok)throw Error();const state=await response.json();online=true;homeActive=state.homeActive===true;connection.classList.add('online');label.textContent='TV’ye bağlı';document.getElementById('tv').textContent=state.device||'Televizyon';const focus=(state.focus||'').split(':').pop();scope.textContent=homeActive?'Ev ekranı açık'+(focusNames[focus]?' · '+focusNames[focus]+' seçili':'')+'. Yön tuşlarıyla gezinebilirsin.':'Uygulama açık. Ev ekranına dönmek için Ev ekranı tuşuna dokun.';enable();}catch(e){offline();}finally{polling=false;}}
+async function send(command){if(!online||busy)return;busy=true;try{const response=await call('command',{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:command});const result=await response.json();feedback.textContent=result.message||'';if(!response.ok&&response.status!==409)throw Error();setTimeout(poll,150);}catch(e){offline();feedback.textContent='Komut TV’ye ulaşmadı.';}finally{busy=false;}}
+let repeatDelay,repeatTimer;
+function stopRepeat(){clearTimeout(repeatDelay);clearInterval(repeatTimer);buttons.forEach(b=>b.classList.remove('pressed'));}
+buttons.forEach(button=>{button.addEventListener('click',event=>{if(!button.hasAttribute('data-repeat')||event.detail===0)send(button.dataset.cmd);});if(button.hasAttribute('data-repeat')){button.addEventListener('pointerdown',event=>{if(button.disabled)return;event.preventDefault();button.setPointerCapture(event.pointerId);stopRepeat();button.classList.add('pressed');send(button.dataset.cmd);repeatDelay=setTimeout(()=>{repeatTimer=setInterval(()=>send(button.dataset.cmd),190);},360);});button.addEventListener('pointerup',stopRepeat);button.addEventListener('pointercancel',stopRepeat);button.addEventListener('lostpointercapture',stopRepeat);}});
+window.addEventListener('blur',stopRepeat);
+document.addEventListener('visibilitychange',()=>{stopRepeat();if(!document.hidden)poll();});
+document.addEventListener('keydown',event=>{const command={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',Enter:'enter',Backspace:'back',Home:'home'}[event.key];if(command&&online&&(homeActive||command==='home')){event.preventDefault();send(command);}});
+poll();setInterval(()=>{if(!document.hidden)poll();},2000);
+})();
+</script>
+</body>
+</html>

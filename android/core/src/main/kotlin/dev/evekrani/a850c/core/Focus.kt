@@ -143,16 +143,8 @@ private fun mosaicColumns(design: HomeDesign): List<List<String>> {
     }
 }
 
-private fun salonRows(design: HomeDesign): List<List<String>> {
-    val rows = design.rows
-        .map { row -> row.cards.map { cardKey(row.id, it.id) } }
-        .filter { it.isNotEmpty() }
-        .toMutableList()
-    if (design.apps.isNotEmpty()) {
-        rows.add(design.apps.map { appKey(it.id) })
-    }
-    return rows
-}
+private fun salonRows(design: HomeDesign): List<List<String>> =
+    if (design.apps.isEmpty()) emptyList() else listOf(design.apps.map { appKey(it.id) })
 
 private fun sinemaColumns(design: HomeDesign): List<List<String>> {
     val cards = design.rows.flatMap { row ->

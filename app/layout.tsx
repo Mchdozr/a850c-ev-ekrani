@@ -1,28 +1,24 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter, Nunito_Sans } from "next/font/google";
+import localFont from "next/font/local";
+import type { ReactNode } from "react";
 
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 
 import "./globals.css";
 
-const display = Fraunces({
-  subsets: ["latin", "latin-ext"],
+const body = localFont({
+  src: "../public/fonts/Inter.ttf",
+  weight: "100 900",
   display: "swap",
-  variable: "--font-display",
-  axes: ["SOFT", "opsz"],
+  variable: "--font-inter",
 });
 
-const body = Inter({
-  subsets: ["latin", "latin-ext"],
+const soft = localFont({
+  src: "../public/fonts/NunitoSans.ttf",
+  weight: "200 900",
   display: "swap",
-  variable: "--font-body",
-});
-
-const soft = Nunito_Sans({
-  subsets: ["latin", "latin-ext"],
-  display: "swap",
-  variable: "--font-soft",
+  variable: "--font-nunito-sans",
 });
 
 export const metadata: Metadata = {
@@ -31,12 +27,12 @@ export const metadata: Metadata = {
     "Arçelik A 850 C Google TV için kendi giriş ekranınızı tasarlayın. Sideload edilen Ev ekranı uygulaması varsayılan Ana Sayfa olabilir; üretici logosu ve Google başlatıcısı değişmez.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="tr"
       suppressHydrationWarning
-      className={`${display.variable} ${body.variable} ${soft.variable} dark h-full antialiased`}
+      className={`${body.variable} ${soft.variable} dark h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <ThemeProvider>

@@ -9,14 +9,6 @@ export type MosaicSlot = {
   featured: boolean;
 };
 
-const SMALL_PLACES: { column: number; row: number }[] = [
-  { column: 3, row: 1 },
-  { column: 2, row: 2 },
-  { column: 4, row: 1 },
-  { column: 3, row: 2 },
-  { column: 4, row: 2 },
-];
-
 export function mosaicSlots(apps: readonly DockApp[]): MosaicSlot[] {
   const netflix = apps.find((app) => appMarkKind(app.id, app.name) === "netflix");
   const youtube = apps.find((app) => appMarkKind(app.id, app.name) === "youtube");
@@ -52,17 +44,6 @@ export function mosaicSlots(apps: readonly DockApp[]): MosaicSlot[] {
     });
   }
   rest.forEach((app, index) => {
-    const placed = youtube && netflix ? { column: index + 1, row: 2 } : SMALL_PLACES[index];
-    if (placed && index < 4) {
-      slots.push({
-        app,
-        column: placed.column,
-        row: placed.row,
-        tall: false,
-        featured: false,
-      });
-      return;
-    }
     const column = (index % 4) + 1;
     const row = Math.floor(index / 4) + 2;
     slots.push({
@@ -83,24 +64,24 @@ export function tileFill(
   swatch: string,
 ): string {
   if (tiles === "sade") {
-    return "#202A36";
+    return "rgba(255,255,255,0.10)";
   }
   if (logoColor === "tek") {
-    return "#F4F4F5";
+    return "#252C38";
   }
   switch (kind) {
     case "netflix":
-      return "#FFFFFF";
+      return "#141418";
     case "youtube":
-      return "#FFFFFF";
+      return "#FF0033";
     case "disney":
-      return "#0C1445";
+      return "#102657";
     case "blutv":
       return "#087BCD";
     case "tabii":
-      return "#00A66C";
+      return "#047A55";
     case "ayarlar":
-      return "#303946";
+      return "#39424F";
     case "letter":
       return swatch;
     default: {
@@ -124,24 +105,24 @@ export function glyphFill(
   ink: string,
 ): string {
   if (logoColor === "tek") {
-    return tileInk(tileFill(kind, tiles, logoColor, ink));
+    return "#FFFFFF";
   }
   if (tiles === "sade") {
     switch (kind) {
       case "youtube":
-        return "#FF0000";
+        return "#FF0033";
       case "netflix":
         return "#E50914";
       case "disney":
         return "#8EB6FF";
       case "blutv":
-        return "#B9D4FF";
+        return "#6CCAFF";
       case "tabii":
         return "#7DFFC3";
       case "ayarlar":
         return "#F4F4F6";
       case "letter":
-        return ink;
+        return "#FFFFFF";
       default: {
         const exhaustive: never = kind;
         return exhaustive;
@@ -150,9 +131,7 @@ export function glyphFill(
   }
   switch (kind) {
     case "youtube":
-      return "#FF0000";
     case "netflix":
-      return "#E50914";
     case "disney":
     case "blutv":
     case "tabii":

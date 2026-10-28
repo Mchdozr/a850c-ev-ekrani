@@ -20,6 +20,20 @@ class CoreTest {
     }
 
     @Test
+    fun editedDesignRoundTripsIncludingCustomPhotos() {
+        val design = createDefaultDesign().copy(
+            layout = LayoutId.SINEMA,
+            greeting = "Merhaba \"ev\"",
+            wallpaper = Wallpaper.Image("data:image/jpeg;base64,aaaa", "Kendi fotoğrafım"),
+            tiles = TileStyle.SADE,
+            labels = LabelMode.LOGO,
+            logoColor = LogoColor.TEK,
+            fontStyle = FontStyle.YUMUSAK,
+        )
+        assertEquals(design, parseDesign(serializeDesign(design)))
+    }
+
+    @Test
     fun rejectsUnsupportedVersionAndForeignImage() {
         val broken = DEFAULT_JSON.replace("\"version\": 1", "\"version\": 2")
         val version = runCatching { parseDesign(broken) }.exceptionOrNull()
@@ -38,7 +52,7 @@ class CoreTest {
     @Test
     fun roundsLampAndAcceptsJpegWallpaper() {
         val json = DEFAULT_JSON
-            .replace("\"lamp\": 10", "\"lamp\": 10.4")
+            .replace("\"lamp\": 35", "\"lamp\": 10.4")
             .replace(
                 """"type": "preset", "presetId": "istanbul-aksam"""",
                 """"type": "image", "dataUrl": "data:image/jpeg;base64,aaaa", "name": "lamba"""",
@@ -60,10 +74,10 @@ class CoreTest {
     fun istanbulClockUsesFixedZone() {
         val afternoon = utc(2026, Calendar.OCTOBER, 27, 15, 5)
         assertEquals("18:05", formatIstanbulTime(afternoon))
-        assertEquals("27 Ekim Salı", formatIstanbulDate(afternoon))
+        assertEquals("27 Ekim Salı · İstanbul", formatIstanbulDate(afternoon))
         val midnight = utc(2026, Calendar.OCTOBER, 27, 21, 30)
         assertEquals("00:30", formatIstanbulTime(midnight))
-        assertEquals("28 Ekim Çarşamba", formatIstanbulDate(midnight))
+        assertEquals("28 Ekim Çarşamba · İstanbul", formatIstanbulDate(midnight))
     }
 
     @Test
@@ -100,13 +114,11 @@ class CoreTest {
             ),
             collectMarks(scene.ops).map { it.kind },
         )
-        val poster = collectPosters(scene.ops).first { it.cardId == "card-bogaz" }
-        assertEquals("Boğaz ışıkları", poster.title)
-        assertTrue(poster.meta.contains("48"))
+        assertTrue(collectPosters(scene.ops).isEmpty())
     }
 
     @Test
-    fun mosaicOpensOnTheGardenWithNetflixFirst() {
+    fun mosaicOpensOnIstanbulWithYouTubeFirst() {
         val design = createDefaultDesign()
         assertEquals(LayoutId.MOZAIK, design.layout)
         val paper = design.wallpaper
@@ -114,6 +126,7 @@ class CoreTest {
         assertEquals(WallpaperPresetId.ISTANBUL_AKSAM, (paper as Wallpaper.Preset).presetId)
         assertEquals(TileStyle.MARKA, design.tiles)
         assertEquals(LabelMode.LOGO_AD, design.labels)
+        assertEquals(35, design.lamp)
         val map = buildFocusMap(design)
         assertEquals(appKey("app-youtube"), firstFocusKey(map))
         assertEquals(appKey("app-netflix"), moveFocus(map, appKey("app-youtube"), Direction.RIGHT))
@@ -125,6 +138,11 @@ class CoreTest {
         assertEquals(youtube.box.height, netflix.box.height, 1f)
         assertTrue(youtube.box.left < netflix.box.left)
         assertTrue(youtube.box.width > disney.box.width)
+        assertEquals(
+            listOf("app-disney", "app-blutv", "app-tabii", "app-ayarlar"),
+            scene.items.filter { it.box.top > youtube.box.top }.sortedBy { it.box.left }
+                .map { (parseFocusKey(it.key) as FocusTarget.App).appId },
+        )
     }
 
     @Test
@@ -132,13 +150,11 @@ class CoreTest {
         val design = createDefaultDesign().copy(layout = LayoutId.SALON)
         val map = buildFocusMap(design)
         val first = firstFocusKey(map)
-        assertEquals(cardKey("row-continue", "card-bogaz"), first)
+        assertEquals(appKey("app-youtube"), first)
         val right = moveFocus(map, first, Direction.RIGHT)
-        assertEquals(cardKey("row-continue", "card-mahalle"), right)
+        assertEquals(appKey("app-netflix"), right)
         val down = moveFocus(map, right, Direction.DOWN)
-        assertEquals(cardKey("row-evening", "card-cocuk"), down)
-        val apps = moveFocus(map, cardKey("row-evening", "card-anadolu"), Direction.DOWN)
-        assertEquals(appKey("app-youtube"), apps)
+        assertEquals(right, down)
         assertEquals(first, moveFocus(map, first, Direction.LEFT))
         assertEquals("Netflix", focusTitle(design, appKey("app-netflix")))
         val caption = selectionCaption(appKey("app-netflix"))
@@ -168,13 +184,11 @@ class CoreTest {
         val design = createDefaultDesign().copy(layout = LayoutId.SALON)
         val salon = layoutScene(design, 1920f, 1080f, "18:05", "27 Ekim Salı", null, measurer)
         assertCovered(design, salon)
-        val card = salon.items.first { it.key == cardKey("row-continue", "card-bogaz") }
-        val nextCard = salon.items.first { it.key == cardKey("row-continue", "card-mahalle") }
         val app = salon.items.first { it.key == appKey("app-youtube") }
         val netflix = salon.items.first { it.key == appKey("app-netflix") }
         val disney = salon.items.first { it.key == appKey("app-disney") }
-        assertTrue(nextCard.box.left > card.box.left)
-        assertTrue(app.box.top > card.box.bottom)
+        assertTrue(salon.items.all { it.key.startsWith("app:") })
+        assertTrue(app.box.top > 1080f / 2f)
         assertTrue(app.box.width > disney.box.width)
         assertTrue(app.box.height > disney.box.height)
         assertTrue(netflix.box.width > disney.box.width)
@@ -188,9 +202,21 @@ class CoreTest {
         assertTrue(side.box.left > hero.box.right)
 
         val saatDesign = design.copy(layout = LayoutId.SAAT)
-        val saat = layoutScene(saatDesign, 1920f, 1080f, "18:05", "27 Ekim Salı", null, measurer)
+        val saat = layoutScene(saatDesign, 1920f, 1080f, "18:05", "27 Ekim Salı", appKey("app-youtube"), measurer)
         assertCovered(saatDesign, saat)
         assertTrue(saat.items.all { it.key.startsWith("app:") })
+    }
+
+    @Test
+    fun saatShowsOnlyTheCenteredClockBeforeAppsAreRevealed() {
+        val design = createDefaultDesign().copy(layout = LayoutId.SAAT)
+        val scene = layoutScene(design, 1920f, 1080f, "18:05", "27 Ekim Salı", null, measurer)
+        val text = scene.ops.filterIsInstance<DrawOp.Text>()
+        assertEquals(1, text.count { it.text == "18:05" })
+        assertFalse(text.any { it.text == design.greeting || it.text == design.weatherLine || it.text == "27 Ekim Salı" })
+        val clock = text.first { it.text == "18:05" }
+        assertEquals(960f, clock.x, 1f)
+        assertEquals(160f, clock.size, 1f)
     }
 
     @Test
@@ -198,6 +224,92 @@ class CoreTest {
         assertEquals(0f, offsetToReveal(0f, 30f, 100f), 0.01f)
         assertEquals(10f, offsetToReveal(80f, 110f, 100f), 0.01f)
         assertEquals(50f, offsetToReveal(120f, 150f, 100f), 0.01f)
+    }
+
+    @Test
+    fun saatKeepsAppsHiddenUntilTheFirstDirection() {
+        val design = createDefaultDesign().copy(layout = LayoutId.SAAT)
+        val resting = layoutScene(design, 1920f, 1080f, "18:05", "27 Ekim Salı", null, measurer)
+        assertTrue(resting.items.isEmpty())
+        assertTrue(collectMarks(resting.ops).isEmpty())
+        for (direction in Direction.entries) {
+            val first = moveFocus(buildFocusMap(design), null, direction)
+            assertEquals(appKey("app-youtube"), first)
+            val awake = layoutScene(design, 1920f, 1080f, "18:05", "27 Ekim Salı", first, measurer)
+            assertCovered(design, awake)
+        }
+    }
+
+    @Test
+    fun appearanceOptionsApplyToEveryLayout() {
+        for (layout in LayoutId.entries) {
+            val design = createDefaultDesign().copy(layout = layout, tiles = TileStyle.SADE, logoColor = LogoColor.TEK)
+            val scene = layoutScene(design, 1920f, 1080f, "18:05", "27 Ekim Salı", appKey("app-youtube"), measurer)
+            val marks = collectMarks(scene.ops)
+            assertEquals(6, marks.size)
+            assertTrue("$layout must use monochrome marks", marks.all { it.ink == 0xFFFFFFFF.toInt() })
+            assertTrue("$layout must use glass tiles", marks.all { (it.fill ushr 24) < 64 })
+            val nameOnly = layoutScene(design.copy(labels = LabelMode.AD), 1920f, 1080f, "18:05", "27 Ekim Salı", appKey("app-youtube"), measurer)
+            assertTrue("$layout must hide marks in name mode", collectMarks(nameOnly.ops).isEmpty())
+        }
+    }
+
+    @Test
+    fun brandAndMonochromeTilesUseTheSharedPalette() {
+        val apps = createDefaultDesign().apps
+        assertEquals(0xFFFF0033.toInt(), tileFill(apps[0], TileStyle.MARKA, LogoColor.MARKA))
+        assertEquals(0xFF141418.toInt(), tileFill(apps[1], TileStyle.MARKA, LogoColor.MARKA))
+        for (app in apps) {
+            assertEquals(0xFF252C38.toInt(), tileFill(app, TileStyle.MARKA, LogoColor.TEK))
+            assertEquals(0xFFFFFFFF.toInt(), glyphInk(app, TileStyle.MARKA, LogoColor.TEK))
+        }
+    }
+
+    @Test
+    fun mosaicAppSelectionsStayInsideTheScreenWithoutOverlaps() {
+        val defaults = createDefaultDesign()
+        val selections = listOf(
+            defaults.apps.drop(1),
+            defaults.apps.filter { appMark(it) != AppMark.NETFLIX },
+            defaults.apps.drop(2),
+            defaults.apps + List(6) { DockApp("extra-$it", "Uygulama $it", AppColorId.GECE) },
+        )
+        for (apps in selections) {
+            val design = defaults.copy(apps = apps)
+            val scene = layoutScene(design, 1920f, 1080f, "18:05", "27 Ekim Salı", null, measurer)
+            assertCovered(design, scene)
+            for ((index, item) in scene.items.withIndex()) {
+                assertTrue(item.box.left >= 0 && item.box.top >= 0 && item.box.right <= 1920 && item.box.bottom <= 1080)
+                for (other in scene.items.drop(index + 1)) {
+                    val overlaps = item.box.left < other.box.right && item.box.right > other.box.left &&
+                        item.box.top < other.box.bottom && item.box.bottom > other.box.top
+                    assertFalse("${item.key} overlaps ${other.key}", overlaps)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun singleFeaturedAppKeepsSecondaryAppsOnTheSecondRow() {
+        val design = createDefaultDesign()
+        for (missing in listOf(AppMark.YOUTUBE, AppMark.NETFLIX)) {
+            val apps = design.apps.filter { appMark(it) != missing }
+            val slots = mosaicSlots(apps)
+            assertTrue(slots.filterNot { it.featured }.all { it.row == 2 })
+            assertNull(focusKeyForMark(design.copy(apps = apps), missing))
+        }
+    }
+
+    @Test
+    fun appCatalogPreservesEditedMetadataAndHiddenCustomApps() {
+        val renamed = createDefaultDesign().apps.first().copy(name = "Benim YouTube", colorId = AppColorId.AMBER)
+        val custom = DockApp("custom-player", "Film arşivi", AppColorId.BAKIR)
+        val full = mergeAppCatalog(listOf(renamed, custom), emptyList())
+        assertEquals(renamed, full.first { it.id == renamed.id })
+        val hidden = mergeAppCatalog(listOf(renamed), full)
+        assertEquals(custom, hidden.first { it.id == custom.id })
+        val restored = mergeAppCatalog(listOf(custom, renamed), hidden)
+        assertEquals(listOf(custom, renamed), restored.take(2))
     }
 
     private fun collectMarks(ops: List<DrawOp>): List<DrawOp.Mark> {
@@ -256,7 +368,7 @@ private const val DEFAULT_JSON = """
   "profileName": "Ev",
   "weatherLine": "İstanbul · serin bir akşam",
   "showClock": true,
-  "lamp": 10,
+  "lamp": 35,
   "wallpaper": { "type": "preset", "presetId": "istanbul-aksam" },
   "tiles": "marka",
   "labels": "logo-ad",

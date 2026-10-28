@@ -65,13 +65,9 @@ function mosaicFocusRows(design: HomeDesign): string[][] {
 }
 
 function salonRows(design: HomeDesign): string[][] {
-  const rows = design.rows
-    .map((row) => row.cards.map((card) => cardKey(row.id, card.id)))
-    .filter((row) => row.length > 0);
-  if (design.apps.length > 0) {
-    rows.push(design.apps.map((app) => appKey(app.id)));
-  }
-  return rows;
+  return design.apps.length > 0
+    ? [design.apps.map((app) => appKey(app.id))]
+    : [];
 }
 
 function sinemaColumns(design: HomeDesign): string[][] {

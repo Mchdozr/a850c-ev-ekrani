@@ -1,0 +1,99 @@
+{
+  "fonts_google_fonts_commit": "9862abc066c9b83bf84c3e8ed1fc2d8d48f9bbf0",
+  "fonts": [
+    {
+      "file": "Inter.ttf",
+      "url": "https://raw.githubusercontent.com/google/fonts/9862abc066c9b83bf84c3e8ed1fc2d8d48f9bbf0/ofl/inter/Inter%5Bopsz,wght%5D.ttf",
+      "sha256": "29160a80ff49ddcab2c97711247e08b1fab27a484a329ce8b813d820dc559031"
+    },
+    {
+      "file": "Inter-OFL.txt",
+      "url": "https://raw.githubusercontent.com/google/fonts/9862abc066c9b83bf84c3e8ed1fc2d8d48f9bbf0/ofl/inter/OFL.txt",
+      "sha256": "5b9321a4298cfeb6b34354164a1c3afc3db114569984c502b9b35d988fd58c57"
+    },
+    {
+      "file": "NunitoSans.ttf",
+      "url": "https://raw.githubusercontent.com/google/fonts/9862abc066c9b83bf84c3e8ed1fc2d8d48f9bbf0/ofl/nunitosans/NunitoSans%5BYTLC,opsz,wdth,wght%5D.ttf",
+      "sha256": "f934d7142fb4784bf828da485b7dcbd90c0c80d514e9d49a5da0ed3a1ae2491d"
+    },
+    {
+      "file": "NunitoSans-OFL.txt",
+      "url": "https://raw.githubusercontent.com/google/fonts/9862abc066c9b83bf84c3e8ed1fc2d8d48f9bbf0/ofl/nunitosans/OFL.txt",
+      "sha256": "efbb0c9e864cef973982d9a17567e6be5c3d1759695574586f3f18c7ecca064b"
+    }
+  ],
+  "wallpapers": [
+    {
+      "file": "istanbul-aksam.jpg",
+      "description": "Bosphorus bridge and Ortaköy at blue hour",
+      "origin": "Original AI-generated project asset; generated 2026-10-28 with OpenAI image generation. Not a stock photograph.",
+      "generation_source_filename": "exec-3f93b7e5-16bf-4eeb-bfc7-ce7c9b4a94df.png",
+      "sha256": "aa5dffb7da7417bc6de458edc55e4ebb79de86d6e7eec9e581707a47385e4901",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "file": "sonbahar-bahce.jpg",
+      "description": "Copper autumn leaves, stone garden path and lantern",
+      "origin": "Original AI-generated project asset; generated 2026-10-28 with OpenAI image generation. Not a stock photograph.",
+      "generation_source_filename": "exec-00d7cd01-6836-4818-af9f-6257a74cb3e8.png",
+      "sha256": "84bafc431249f99e16e9178ae3b1995e0dad37b0167b88476eca1c1770c9b530",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "file": "siyah.jpg",
+      "description": "Obsidian stone folds touched by a narrow beam of light",
+      "origin": "Original AI-generated project asset; generated 2026-10-28 with OpenAI image generation. Not a stock photograph.",
+      "generation_source_filename": "exec-49929965-7546-4792-9630-6ce1663859cb.png",
+      "sha256": "56443b1f506d59da36ad755627dcd98976f6e9989e754cb6fe2f10943e048b88",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "file": "bakir-lamba.jpg",
+      "description": "Copper table lamp and dark walnut at night",
+      "origin": "Original AI-generated project asset; generated 2026-10-28 with OpenAI image generation. Not a stock photograph.",
+      "generation_source_filename": "exec-967385a3-f67b-4b90-a5ec-23b2041570fa.png",
+      "sha256": "f7b7a6df1cc4b4715fb3ebe76713b205fce586b37a5925452282c547ca62546a",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "file": "gece-cam.jpg",
+      "description": "Rain-speckled glass overlooking the night city",
+      "origin": "Original AI-generated project asset; generated 2026-10-28 with OpenAI image generation. Not a stock photograph.",
+      "generation_source_filename": "exec-4ebbe4c8-1a76-4c04-982b-126d96c713b3.png",
+      "sha256": "47b5ba061570e45b09b769cd31cf28b2e83073e8bd847430733056fef81c9377",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "file": "somine.jpg",
+      "description": "Limestone fireplace with a burning log fire",
+      "origin": "Original AI-generated project asset; generated 2026-10-28 with OpenAI image generation. Not a stock photograph.",
+      "generation_source_filename": "exec-7d3cb028-529d-4af0-a172-66a4c0c32610.png",
+      "sha256": "d85938873735892dd3af7292be3d31c9b18627dfd128bef6566e21070bb13591",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "file": "zeytin-gece.jpg",
+      "description": "Moonlit olive branch above Mediterranean hills",
+      "origin": "Original AI-generated project asset; generated 2026-10-28 with OpenAI image generation. Not a stock photograph.",
+      "generation_source_filename": "exec-a1236863-29c5-418b-82a8-bd0e55237471.png",
+      "sha256": "a7c26fc41b99bd424d83f417c8c5d098bdc91ca846ff33cffd1b7c74a1acd5cd",
+      "width": 1920,
+      "height": 1080
+    },
+    {
+      "file": "kis-aksami.jpg",
+      "description": "Snow-covered garden seen through a warm winter window",
+      "origin": "Original AI-generated project asset; generated 2026-10-28 with OpenAI image generation. Not a stock photograph.",
+      "generation_source_filename": "exec-6c156a4f-99a2-4abb-aed4-7d56dd60b59e.png",
+      "sha256": "910a1e97f7efa5aaf7bc310143dcb173b4462b900b6a86a57ff169cc8f4e7489",
+      "width": 1920,
+      "height": 1080
+    }
+  ]
+}
