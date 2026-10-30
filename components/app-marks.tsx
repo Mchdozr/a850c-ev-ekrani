@@ -16,6 +16,7 @@ const BRAND_PLATES: Record<AppMarkKind, string> = {
   blutv: "#087BCD",
   tabii: "#047A55",
   ayarlar: "#39424F",
+  "canli-tv": "#6A3D1B",
   letter: "transparent",
 };
 
@@ -62,6 +63,8 @@ export function AppGlyphMark({
       return <Wordmark text="tabii" fill={fill} rounded />;
     case "ayarlar":
       return <GearGlyph fill={fill} />;
+    case "canli-tv":
+      return <TelevisionGlyph fill={fill} />;
     case "letter":
       return (
         <span
@@ -76,6 +79,16 @@ export function AppGlyphMark({
       return exhaustive;
     }
   }
+}
+
+function TelevisionGlyph({ fill }: { fill: string }) {
+  return (
+    <svg viewBox="0 0 80 64" className="h-full w-full" aria-hidden="true">
+      <rect x="8" y="10" width="64" height="40" rx="7" fill="none" stroke={fill} strokeWidth="5" />
+      <path d="M31 56h18M40 50v6M30 3l10 8 10-8" fill="none" stroke={fill} strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M34 24l15 7-15 7z" fill={fill} />
+    </svg>
+  );
 }
 
 function DisneyGlyph({ fill }: { fill: string }) {

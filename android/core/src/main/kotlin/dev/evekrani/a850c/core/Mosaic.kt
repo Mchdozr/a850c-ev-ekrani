@@ -53,6 +53,7 @@ fun tileFill(app: DockApp, tiles: TileStyle, logo: LogoColor): Int {
         AppMark.BLUTV -> 0xFF087BCD.toInt()
         AppMark.TABII -> 0xFF047A55.toInt()
         AppMark.AYARLAR -> 0xFF39424F.toInt()
+        AppMark.CANLI_TV -> 0xFF6A3D1B.toInt()
         AppMark.LETTER -> app.colorId.swatch
     }
 }
@@ -79,11 +80,12 @@ fun glyphInk(app: DockApp, tiles: TileStyle, logo: LogoColor): Int {
             AppMark.BLUTV -> 0xFFB9D4FF.toInt()
             AppMark.TABII -> 0xFF7DFFC3.toInt()
             AppMark.AYARLAR -> 0xFFF4F4F6.toInt()
+            AppMark.CANLI_TV -> 0xFFFFD29B.toInt()
             AppMark.LETTER -> app.colorId.ink
         }
     }
     return when (appMark(app)) {
-        AppMark.YOUTUBE, AppMark.NETFLIX, AppMark.DISNEY, AppMark.BLUTV, AppMark.TABII, AppMark.AYARLAR -> 0xFFFFFFFF.toInt()
+        AppMark.YOUTUBE, AppMark.NETFLIX, AppMark.DISNEY, AppMark.BLUTV, AppMark.TABII, AppMark.AYARLAR, AppMark.CANLI_TV -> 0xFFFFFFFF.toInt()
         AppMark.LETTER -> app.colorId.ink
     }
 }

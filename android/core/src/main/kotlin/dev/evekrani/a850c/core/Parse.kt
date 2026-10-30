@@ -188,6 +188,7 @@ private fun parseApp(value: Any?, seen: MutableSet<String>): DockApp {
         id = parseId(value.opt("id"), "Uygulama", seen),
         name = parseText(value.opt("name"), "Uygulama adı", Limits.appName),
         colorId = color,
+        packageName = value.opt("packageName").takeIf { it is String } as? String,
     )
 }
 

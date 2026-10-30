@@ -101,6 +101,7 @@ data class DockApp(
     val id: String,
     val name: String,
     val colorId: AppColorId,
+    val packageName: String? = null,
 )
 
 data class ContentCard(

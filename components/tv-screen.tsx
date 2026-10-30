@@ -526,6 +526,14 @@ export function TvScreen(props: TvScreenProps) {
       <div className="relative h-full">
         <ScreenBody {...props} now={now} />
       </div>
+      <button
+        type="button"
+        aria-label="Canlı TV kısayolu"
+        onClick={() => props.onActivate("app:app-canli-tv")}
+        className="absolute right-[5cqw] top-[4.6cqw] rounded-full border border-white/30 bg-[#1a1110]/55 px-[1.35cqw] py-[0.8cqw] text-[1.12cqw] font-semibold text-white shadow-lg backdrop-blur-xl transition hover:bg-[#6a3d1b]/75 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+      >
+        Canlı TV
+      </button>
     </div>
   );
 }

@@ -16,6 +16,8 @@ Sohbetteki bulut makinesinin `127.0.0.1` adresi sizin bilgisayarınıza ait değ
 
 Varsayılan: İstanbul akşamı, sol üstte İstanbul saati/tarihi, YouTube solda ve Netflix sağda eşit yükseklikte büyük karolar; ikinci sırada Disney+, BluTV, tabii ve Ayarlar. Beyaz odak çerçevesi yön tuşlarıyla hareket eder.
 
+Sağ üstteki cam **Canlı TV** düğmesi (ve TV kumandasındaki TV tuşu), cihazdaki yayın uygulamasını açar; bulunamazsa TV giriş ayarını açar. Ayarlar paneli açıldığında TV’de kurulu uygulamalar listelenir; bir satırı Göster/Gizle yaparak seçtiklerinizi ana ekrana ekleyebilirsiniz. **Ayarlar → Google TV’ye dön** geçici olarak orijinal ana ekranı açar. **Ayarlar → Varsayılan ana sayfa** Android’in seçim ekranını açar; orijinal Google TV’yi seçmek veya Ev ekranı’nı kaldırmak eski düzene eksiksiz döner.
+
 - **Mozaik:** iki büyük öncelikli karo ve altında diğer uygulamalar.
 - **Dock:** altta tek sıra; YouTube ve Netflix daha büyük. JSON içindeki eski `salon` kimliği uyumluluk için korunur.
 - **Sinema:** büyük içerik afişi, yan liste ve uygulama sütunu; bunlar örnek içeriklerdir, yayın servislerinden izleme geçmişi alınmaz.

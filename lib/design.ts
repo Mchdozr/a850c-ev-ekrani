@@ -115,6 +115,7 @@ export type DockApp = {
   id: string;
   name: string;
   colorId: AppColorId;
+  packageName?: string;
 };
 
 export type ContentCard = {

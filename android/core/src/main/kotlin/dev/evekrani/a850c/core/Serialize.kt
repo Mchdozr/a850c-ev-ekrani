@@ -33,6 +33,7 @@ fun serializeDesign(design: HomeDesign): String = JSONObject().apply {
             put("id", app.id)
             put("name", app.name)
             put("colorId", app.colorId.wire)
+            app.packageName?.let { put("packageName", it) }
         }) }
     })
     put("rows", JSONArray().apply {

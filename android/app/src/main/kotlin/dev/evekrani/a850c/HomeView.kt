@@ -16,8 +16,10 @@ import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.SystemClock
+import android.provider.Settings
 import android.util.Base64
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import dev.evekrani.a850c.core.AppMark
 import dev.evekrani.a850c.core.AppColorId
@@ -118,6 +120,7 @@ class HomeView(context: Context) : View(context) {
     private var settingsIndex = 0
     private var phoneAvailable = false
     private var phoneConnected = false
+    private var liveTvButton: Box? = null
     internal var onPairRequested: (() -> Unit)? = null
     internal var onDesignChanged: ((HomeDesign) -> Unit)? = null
 
@@ -175,9 +178,14 @@ class HomeView(context: Context) : View(context) {
             return true
         }
         if (event.keyCode == KeyEvent.KEYCODE_SETTINGS) {
+            refreshAppCatalog()
             settingsOpen = true
             settingsIndex = 0
             invalidate()
+            return true
+        }
+        if (event.keyCode == KeyEvent.KEYCODE_TV) {
+            launchLiveTv()
             return true
         }
         if (settingsOpen) {
@@ -339,6 +347,7 @@ class HomeView(context: Context) : View(context) {
                 put("id", app.id)
                 put("name", app.name)
                 put("colorId", app.colorId.wire)
+                app.packageName?.let { put("packageName", it) }
             }) }
         }
         preferences.edit().putString("source", sourceFingerprint)
@@ -377,6 +386,7 @@ class HomeView(context: Context) : View(context) {
         drawBackdrop(canvas, frame.width, frame.height)
         val scene = scene(frame.width, frame.height)
         drawOps(canvas, scene.ops, scene)
+        drawLiveTvButton(canvas, frame.width, frame.height)
         drawFocus(canvas, scene, frame.width)
         if (design.layout != LayoutId.SINEMA) {
             val size = cqw(frame.width, 1.25f)
@@ -388,6 +398,29 @@ class HomeView(context: Context) : View(context) {
         drawOverlay(canvas, frame.width, frame.height)
         drawSettings(canvas, frame.width, frame.height)
         canvas.restoreToCount(save)
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.action == MotionEvent.ACTION_UP && liveTvButton?.let { event.x in it.left..it.right && event.y in it.top..it.bottom } == true) {
+            launchLiveTv()
+            return true
+        }
+        return true
+    }
+
+    private fun drawLiveTvButton(canvas: Canvas, width: Float, height: Float) {
+        val buttonWidth = cqw(width, 12.4f)
+        val buttonHeight = cqw(width, 3.45f)
+        val right = width - cqw(width, 5f)
+        val top = if (design.layout == LayoutId.SINEMA) cqw(width, 3.2f) else cqw(width, 4.6f)
+        val box = Box(right - buttonWidth, top, right, top + buttonHeight)
+        liveTvButton = box
+        drawRound(canvas, DrawOp.RoundRect(box, 0x5C1A1110, buttonHeight / 2f, 0x52FFFFFF, cqw(width, 0.06f)))
+        val label = "Canlı TV"
+        val size = cqw(width, 1.12f)
+        val metrics = measurer.measure(label, size, FontRole.BODY, 0f)
+        drawText(canvas, DrawOp.Text(label, box.left + cqw(width, 1.35f), box.top + (box.height - metrics.height) / 2f + metrics.ascent,
+            size, 0xFFFFFFFF.toInt(), FontRole.BODY, TextAlign.LEFT, 0f))
     }
 
     private fun apply(source: LoadedDesign, useSaved: Boolean = true) {
@@ -435,6 +468,7 @@ class HomeView(context: Context) : View(context) {
         val key = focusKey ?: return
         val target = parseFocusKey(key) as? FocusTarget.App
         if (target != null && design.apps.firstOrNull { it.id == target.appId }?.let(::appMark) == AppMark.AYARLAR) {
+            refreshAppCatalog()
             settingsOpen = true
             settingsIndex = 0
             invalidate()
@@ -469,7 +503,29 @@ class HomeView(context: Context) : View(context) {
     private fun launchInstalled(key: String): Boolean {
         val target = parseFocusKey(key) as? FocusTarget.App ?: return false
         val app = design.apps.firstOrNull { it.id == target.appId } ?: return false
+        if (appMark(app) == AppMark.CANLI_TV) return launchLiveTv()
+        val packageName = app.packageName
+        if (packageName != null) return launchPackage(packageName)
         return launchMark(appMark(app))
+    }
+
+    private fun launchPackage(packageName: String): Boolean {
+        val manager = context.packageManager
+        val intent = try { manager.getLeanbackLaunchIntentForPackage(packageName) ?: manager.getLaunchIntentForPackage(packageName) } catch (_: Exception) { null } ?: return false
+        return try { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true } catch (_: Exception) { false }
+    }
+
+    private fun launchLiveTv(): Boolean {
+        val packageName = discoverLaunchableApps().firstOrNull { app ->
+            val text = app.name.lowercase() + " " + (app.packageName ?: "").lowercase()
+            "live" in text || "tv" in text || "kanal" in text || "channel" in text
+        }?.packageName
+        if (packageName != null && launchPackage(packageName)) return true
+        return try {
+            context.startActivity(Intent("android.settings.TV_INPUT_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true
+        } catch (_: ActivityNotFoundException) {
+            overlay = Overlay("Canlı TV", "Yayın uygulaması bulunamadı. Girişler Ayarlar’dan seçilebilir."); invalidate(); false
+        }
     }
 
     private fun launchMark(mark: AppMark): Boolean {
@@ -562,6 +618,7 @@ class HomeView(context: Context) : View(context) {
                 AppMark.BLUTV -> R.drawable.mark_blutv_glyph
                 AppMark.TABII -> R.drawable.mark_tabii_glyph
                 AppMark.AYARLAR -> R.drawable.mark_ayarlar_glyph
+                AppMark.CANLI_TV -> R.drawable.mark_canli_tv_glyph
                 AppMark.LETTER -> return null
             }
         } else {
@@ -572,6 +629,7 @@ class HomeView(context: Context) : View(context) {
                 AppMark.BLUTV -> R.drawable.mark_blutv
                 AppMark.TABII -> R.drawable.mark_tabii
                 AppMark.AYARLAR -> R.drawable.mark_ayarlar
+                AppMark.CANLI_TV -> R.drawable.mark_canli_tv
                 AppMark.LETTER -> return null
             }
         }
@@ -825,6 +883,7 @@ class HomeView(context: Context) : View(context) {
             AppMark.BLUTV -> "BluTV"
             AppMark.TABII -> "tabii"
             AppMark.AYARLAR -> null
+            AppMark.CANLI_TV -> null
             AppMark.LETTER -> null
         }
     }
@@ -1084,12 +1143,42 @@ class HomeView(context: Context) : View(context) {
                 val color = AppColorId.fromWire(app.optString("colorId")) ?: continue
                 val id = app.optString("id")
                 val name = app.optString("name")
-                if (id.isNotEmpty() && name.isNotEmpty()) add(DockApp(id, name, color))
+                val packageName = app.optString("packageName").takeIf { it.isNotEmpty() }
+                if (id.isNotEmpty() && name.isNotEmpty()) add(DockApp(id, name, color, packageName))
             }
         }
     }.getOrDefault(emptyList())
 
     private fun settingsApps(): List<DockApp> = appCatalog
+
+    private fun discoverLaunchableApps(): List<DockApp> {
+        val manager = context.packageManager
+        val intents = listOf(
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER),
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),
+        )
+        val packages = linkedMapOf<String, String>()
+        intents.flatMap { manager.queryIntentActivities(it, 0) }.forEach { info ->
+            val packageName = info.activityInfo.packageName
+            if (packageName == context.packageName || packageName in ORIGINAL_HOME_PACKAGES) return@forEach
+            packages.putIfAbsent(packageName, info.loadLabel(manager).toString().trim())
+        }
+        return packages.entries.sortedBy { it.value.lowercase() }.mapIndexed { index, entry ->
+            DockApp(
+                id = "pkg-" + entry.key.replace(Regex("[^A-Za-z0-9_-]"), "-").take(70),
+                name = entry.value.ifEmpty { entry.key }.take(dev.evekrani.a850c.core.Limits.appName),
+                colorId = AppColorId.entries[index % AppColorId.entries.size],
+                packageName = entry.key,
+            )
+        }
+    }
+
+    private fun refreshAppCatalog() {
+        appCatalog = mergeAppCatalog(
+            appCatalog + listOf(DockApp("app-canli-tv", "Canlı TV", AppColorId.BAKIR)) + discoverLaunchableApps(),
+            design.apps,
+        )
+    }
 
     private fun settingsRows(): List<Pair<String, String>> {
         val paper = (design.wallpaper as? Wallpaper.Preset)?.presetId
@@ -1115,6 +1204,8 @@ class HomeView(context: Context) : View(context) {
             app.name to if (design.apps.any { it.id == app.id }) "Göster" else "Gizle"
         } + listOf(
             "Telefonla bağlan" to if (phoneConnected) "Bağlı" else if (phoneAvailable) "QR kodu göster" else "Bağlantıyı aç",
+            "Google TV’ye dön" to "Orijinal ana ekran",
+            "Varsayılan ana sayfa" to "Sistem seçimi",
             "Tamam" to "Ekrana dön",
         )
     }
@@ -1162,6 +1253,10 @@ class HomeView(context: Context) : View(context) {
                     if (index == apps.size) {
                         settingsOpen = false
                         onPairRequested?.invoke()
+                    } else if (index == apps.size + 1) {
+                        launchOriginalHome()
+                    } else if (index == apps.size + 2) {
+                        openHomeSettings()
                     } else settingsOpen = false
                     return
                 }
@@ -1170,6 +1265,30 @@ class HomeView(context: Context) : View(context) {
         applyEditedDesign(next)
         if (selectedAppId != null) {
             settingsIndex = 8 + settingsApps().indexOfFirst { it.id == selectedAppId }.coerceAtLeast(0)
+        }
+    }
+
+    private fun launchOriginalHome() {
+        for (packageName in ORIGINAL_HOME_PACKAGES) {
+            val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).setPackage(packageName)
+            if (context.packageManager.resolveActivity(intent, 0) == null) continue
+            try {
+                context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                return
+            } catch (_: Exception) {
+                // Try the other original launcher when an OEM blocks this one.
+            }
+        }
+        overlay = Overlay("Google TV’ye dön", "Orijinal ana ekran bulunamadı. Varsayılan ana sayfa ayarını açın.")
+        invalidate()
+    }
+
+    private fun openHomeSettings() {
+        try {
+            context.startActivity(Intent(Settings.ACTION_HOME_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (_: ActivityNotFoundException) {
+            overlay = Overlay("Varsayılan ana sayfa", "Bu TV’de Ana Sayfa seçimi Ayarlar uygulamasından yapılır.")
+            invalidate()
         }
     }
 
@@ -1297,6 +1416,10 @@ class HomeView(context: Context) : View(context) {
                 "com.trt.tabii",
                 "com.tabii",
             ),
+        )
+        private val ORIGINAL_HOME_PACKAGES = listOf(
+            "com.google.android.apps.tv.launcherx",
+            "com.google.android.tvlauncher",
         )
     }
 

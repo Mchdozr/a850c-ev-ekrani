@@ -5,6 +5,7 @@ export type AppMarkKind =
   | "blutv"
   | "tabii"
   | "ayarlar"
+  | "canli-tv"
   | "letter";
 
 export function appMarkKind(id: string, name: string): AppMarkKind {
@@ -26,6 +27,9 @@ export function appMarkKind(id: string, name: string): AppMarkKind {
   }
   if (haystack.includes("ayarlar") || haystack.includes("settings")) {
     return "ayarlar";
+  }
+  if (haystack.includes("canli-tv") || haystack.includes("canlı tv") || haystack.includes("live tv")) {
+    return "canli-tv";
   }
   return "letter";
 }

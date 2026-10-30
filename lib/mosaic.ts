@@ -82,6 +82,8 @@ export function tileFill(
       return "#047A55";
     case "ayarlar":
       return "#39424F";
+    case "canli-tv":
+      return "#6A3D1B";
     case "letter":
       return swatch;
     default: {
@@ -121,6 +123,8 @@ export function glyphFill(
         return "#7DFFC3";
       case "ayarlar":
         return "#F4F4F6";
+      case "canli-tv":
+        return "#FFD29B";
       case "letter":
         return "#FFFFFF";
       default: {
@@ -136,6 +140,7 @@ export function glyphFill(
     case "blutv":
     case "tabii":
     case "ayarlar":
+    case "canli-tv":
       return "#FFFFFF";
     case "letter":
       return ink;

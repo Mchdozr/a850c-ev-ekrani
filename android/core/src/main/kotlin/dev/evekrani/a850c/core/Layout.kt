@@ -312,11 +312,11 @@ private fun layoutAppChip(
     if (design.labels != LabelMode.AD) {
         val markHeight = height - pad * 2f - if (design.labels == LabelMode.LOGO_AD) metrics.height + gap else 0f
         val markWidth = when (kind) {
-            AppMark.AYARLAR -> minOf(markHeight, width * 0.4f)
+            AppMark.AYARLAR, AppMark.CANLI_TV -> minOf(markHeight, width * 0.4f)
             AppMark.YOUTUBE, AppMark.NETFLIX -> width * 0.65f
             else -> width * 0.91f
         }
-        val drawnHeight = if (kind == AppMark.AYARLAR) markWidth else markHeight
+        val drawnHeight = if (kind == AppMark.AYARLAR || kind == AppMark.CANLI_TV) markWidth else markHeight
         val markTop = pad + (markHeight - drawnHeight) / 2f
         children += DrawOp.Mark(
             Box((width - markWidth) / 2f, markTop, (width + markWidth) / 2f, markTop + drawnHeight),
@@ -655,6 +655,7 @@ private fun brandWord(kind: AppMark): String? {
         AppMark.BLUTV -> "BluTV"
         AppMark.TABII -> "tabii"
         AppMark.AYARLAR -> null
+        AppMark.CANLI_TV -> null
         AppMark.LETTER -> null
     }
 }

@@ -118,6 +118,15 @@ class CoreTest {
     }
 
     @Test
+    fun liveTvCardUsesTheDedicatedMark() {
+        val liveTv = DockApp("app-canli-tv", "Canlı TV", AppColorId.BAKIR)
+        assertEquals("Canlı TV", liveTv.name)
+        assertEquals(AppMark.CANLI_TV, appMark(liveTv))
+        val design = createDefaultDesign().copy(apps = createDefaultDesign().apps + liveTv)
+        assertEquals(appKey("app-canli-tv"), focusKeyForMark(design, AppMark.CANLI_TV))
+    }
+
+    @Test
     fun mosaicOpensOnIstanbulWithYouTubeFirst() {
         val design = createDefaultDesign()
         assertEquals(LayoutId.MOZAIK, design.layout)

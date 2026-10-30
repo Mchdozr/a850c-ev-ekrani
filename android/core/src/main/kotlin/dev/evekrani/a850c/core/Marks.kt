@@ -7,6 +7,7 @@ enum class AppMark {
     BLUTV,
     TABII,
     AYARLAR,
+    CANLI_TV,
     LETTER,
 }
 
@@ -19,6 +20,7 @@ fun appMark(app: DockApp): AppMark {
         "blutv" in haystack || "blu tv" in haystack -> AppMark.BLUTV
         "tabii" in haystack -> AppMark.TABII
         "ayarlar" in haystack || "settings" in haystack -> AppMark.AYARLAR
+        "canli-tv" in haystack || "canlı tv" in haystack || "live tv" in haystack -> AppMark.CANLI_TV
         else -> AppMark.LETTER
     }
 }
