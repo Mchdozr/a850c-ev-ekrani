@@ -4,6 +4,14 @@ Arçelik A 850 C için Next.js tasarımcı ve sideload edilen Android TV HOME uy
 
 Sistem başlatıcıları (`com.google.android.apps.tv.launcherx`, `com.google.android.tvlauncher`), firmware, üreticinin açılış logosu, sistem bölümü ve imza kontrolü değiştirilmez. Bu, Android açıldıktan sonra varsayılan Ana Sayfa olarak seçilen bağımsız uygulamadır.
 
+## Önce kendi tarayıcınızda görün
+
+Kurulumsuz görünüm: `release/Ev-Ekrani-Onizleme.zip` dosyasını indirin, ZIP'i çıkarın ve içindeki **Onizleme.html** dosyasına çift tıklayın. İnternet, Node.js ve sunucu gerekmez; sekiz duvar görseli ve fontlar dosyanın içindedir. Tasarımcı ve TV ekranı projedeki gerçek bileşenlerdir: tema, görünüm ayarları, fotoğraf yükleme ve JSON dışa aktarma kullanılabilir. Telefon bağlantısı ve REA sunucu gerektirir; dosya önizlemesi bunlara bağlıymış gibi görünmez. Dosyanın güncel sürümü `npm run preview:build` ile üretilir.
+
+Tam uygulama: GitHub'dan projeyi ZIP olarak indirip çıkarın. Windows'ta **Baslat.cmd**, macOS'ta **Baslat.command** açılır; Linux'ta `bash Baslat.command` kullanılır. Node.js LTS gerekir; yoksa Windows başlatıcı kurulumsuz önizlemeyi açar ve Node.js kurulum bilgisini gösterir. Başlatıcı eksik npm bağımlılıklarını kurar, üretim derlemesini alır, boş port seçer ve uygulama yanıt verdiğinde tarayıcıyı açar. Terminal açık kaldığı sürece çalışır. Projeyi güncellerken kilit dosyası değiştiyse `npm ci` çalıştırın.
+
+Sohbetteki bulut makinesinin `127.0.0.1` adresi sizin bilgisayarınıza ait değildir. Yukarıdaki başlatıcıyı kendi bilgisayarınızda çalıştırınca açılan adres sizin tarayıcınızda erişilebilir olur. Kalıcı internet adresi için ayrıca erişilebilir bir Node.js barındırma hesabı gerekir; bu depo kendiliğinden yayınlanmış bir web sitesi değildir.
+
 ## Görünüm
 
 Varsayılan: İstanbul akşamı, sol üstte İstanbul saati/tarihi, YouTube solda ve Netflix sağda eşit yükseklikte büyük karolar; ikinci sırada Disney+, BluTV, tabii ve Ayarlar. Beyaz odak çerçevesi yön tuşlarıyla hareket eder.

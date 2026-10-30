@@ -1,0 +1,17 @@
+EV EKRANI — KURULUMSUZ ÖNİZLEME
+
+1. ZIP dosyasını bir klasöre çıkarın.
+2. Onizleme.html dosyasına çift tıklayın.
+3. Temaları ve ayarları değiştirin; Tam ekran bağlantısıyla TV görünümüne geçin.
+4. Dosya ve REA > Dosya bölümünden JSON indirin.
+
+İnternet ve sunucu gerekmez. Görseller ve fontlar bu HTML'in içindedir.
+Telefon kumandası gerçek TV'de Menü > Telefonla bağlan QR koduyla açılır.
+REA ve tarayıcılar arası kumanda için tam sunuculu uygulamayı çalıştırın.
+
+Tam proje, APK ve kurulum adımları:
+https://github.com/Mchdozr/a850c-ev-ekrani
+
+Windows: kaynak ZIP'ini çıkarıp Baslat.cmd açın.
+macOS/Linux: Baslat.command (Node.js LTS gerekir).
+TV APK: android/evekrani-a850c-debug.apk

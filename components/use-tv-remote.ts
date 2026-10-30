@@ -113,8 +113,9 @@ export function useTvRemote(
         onConfirm(activeKey);
       }
     }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    // Read the clock's hidden state before its bubble listener reveals the dock.
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [activeKey, design, map, onConfirm, onEscape]);
 
   useRemoteLink(followPhone, design, map, activeKey, setFocusKey, onConfirm);

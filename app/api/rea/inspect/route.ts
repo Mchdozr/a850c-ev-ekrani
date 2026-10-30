@@ -13,7 +13,7 @@ function reaBinary(): string {
 
 function runRea(apkPath: string): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(reaBinary(), ["inspect-android-package", apkPath, "--format", "json"], {
+    const child = spawn(/* turbopackIgnore: true */ reaBinary(), ["inspect-android-package", apkPath, "--format", "json"], {
       env: {
         ...process.env,
         PATH: `${join(homedir(), ".local", "bin")}:${process.env.PATH ?? ""}`,
