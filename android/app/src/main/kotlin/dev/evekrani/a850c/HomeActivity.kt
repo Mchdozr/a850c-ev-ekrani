@@ -53,10 +53,10 @@ class HomeActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        hideSystemUi()
         home = HomeView(this)
         home.onPairRequested = { showPairing() }
         setContentView(home)
+        hideSystemUi()
         home.bindRemote(intent?.getStringExtra(REMOTE_EXTRA))
         startPhoneRemote()
         main.post(remoteTick)
